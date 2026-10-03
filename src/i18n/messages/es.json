@@ -27,7 +27,10 @@
     "accountHeading": "Cuenta",
     "login": "Iniciar sesión",
     "compare": "Comparación",
-    "sheetSlogan": "La IA compone tu itinerario en segundos."
+    "sheetSlogan": "La IA compone tu itinerario en segundos.",
+    "languageAria": "Elegir idioma — actualmente {current}",
+    "languageHeading": "Idioma",
+    "languageSheetHint": "Al cambiar de idioma permaneces en la misma página en el idioma elegido."
   },
   "hero": {
     "title": "¿Qué quieres vivir en Eslovenia?",
@@ -174,7 +177,8 @@
     "sortRating": "Mejor valorado",
     "sortPrice": "Más barato",
     "cardPrice": "≈ {price} €",
-    "cardPriceSr": " · precio estimado por persona"
+    "cardPriceSr": " · precio estimado por persona",
+    "guideLink": "Guía"
   },
   "homeExp": {
     "eyebrow": "Experiencias",
@@ -1259,7 +1263,7 @@
   },
   "demoScenarios": {
     "badge": "Pruébalo en 30 segundos",
-    "title": "¿Qué quieres experimentar?",
+    "title": "Crea un itinerario en 30 segundos",
     "subtitle": "Haz clic en una de las opciones y la AI creará tu plan al instante",
     "customTitle": "Escribe el tuyo propio",
     "customSubtitle": "O elige uno de arriba",

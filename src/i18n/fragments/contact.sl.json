@@ -1,7 +1,7 @@
 {
   "contact": {
     "title": "Kontakt",
-    "intro": "Imate vprašanja o platformi, sodelovanju ali tehničnih zadevah? Pišite nam.",
+    "intro": "Imaš vprašanja o platformi, sodelovanju ali tehničnih zadevah? Piši nam.",
     "cards": {
       "emailTitle": "Email",
       "locationTitle": "Lokacija",
@@ -11,11 +11,11 @@
       "supportTitle": "Tehnična podpora"
     },
     "providersTitle": "Za ponudnike",
-    "providersText": "Želite postati del platforme? Registrirajte se na portalu za ponudnike.",
+    "providersText": "Želiš postati del platforme? Registriraj se na portalu za ponudnike.",
     "providersLink": "Registracija ponudnika →",
     "meta": {
       "title": "Kontakt",
-      "description": "Stopite v stik z ekipo Discover Slovenia AI. Email, telefon in kontaktne informacije."
+      "description": "Stopi v stik z ekipo Discover Slovenia AI. Email, telefon in kontaktne informacije."
     }
   }
 }

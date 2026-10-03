@@ -6,6 +6,7 @@ import {
   Star,
   Clock,
   ArrowRight,
+  BookOpenText,
   Compass,
   Filter,
   SlidersHorizontal,
@@ -670,20 +671,35 @@ function DestinationCard({
           ))}
         </div>
 
-        {/* CTA */}
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="mt-1 justify-between self-start text-primary hover:bg-primary/10 hover:text-primary"
-          onClick={(e) => {
-            e.stopPropagation();
-            onOpen();
-          }}
-        >
-          {t("moreInfo")}
-          <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-        </Button>
+        {/* CTA — POLISH 1.173.0: dve možnosti na kartici: modal (hitri
+            vpogled, obstoječi gumb) + STRAN destinacije (hub z vodniki,
+            itinererji, things-to-do — prej nedosegljiva iz kataloga).
+            Povezava je pravi <a> → notranje povezovanje za iskalnike. */}
+        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 self-start">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="justify-between text-primary hover:bg-primary/10 hover:text-primary"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpen();
+            }}
+          >
+            {t("moreInfo")}
+            <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+          </Button>
+          <Link
+            href={`/destinacija/${encodeURIComponent(destination.slug)}`}
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+            className="inline-flex min-h-[44px] items-center gap-1 px-1 text-xs font-medium text-muted-foreground underline-offset-2 transition-colors hover:text-primary hover:underline"
+          >
+            <BookOpenText className="size-3.5" aria-hidden="true" />
+            {t("guideLink")}
+            <ArrowRight className="size-3" aria-hidden="true" />
+          </Link>
+        </div>
       </CardContent>
     </Card>
   );

@@ -34,7 +34,7 @@ const L = {
   successLink: { sl: "Moja potovanja", en: "My trips" },
   cancelledTitle: { sl: "Plačilo preklicano", en: "Payment cancelled" },
   cancelledBody: {
-    sl: "Plačilo ni bilo opravljeno — naročilo oz. rezervacija je razveljavljena in morebitna rezervacija zaloge/mesta je sproščena. Poskusite znova, kadar želite.",
+    sl: "Plačilo ni bilo opravljeno — naročilo oz. rezervacija je razveljavljena in morebitna rezervacija zaloge/mesta je sproščena. Poskusi znova, kdaj koli želiš.",
     en: "No payment was made — the order or booking has been voided and any reserved stock/capacity has been released. Feel free to try again whenever you like.",
   },
 } as const;

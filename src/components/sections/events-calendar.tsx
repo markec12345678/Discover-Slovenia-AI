@@ -105,7 +105,7 @@ const L = {
     en: "No events match your filters.",
   },
   emptyDescription: {
-    sl: "Poskusite spremeniti mesec, kategorijo ali regijo.",
+    sl: "Poskusi spremeniti mesec, kategorijo ali regijo.",
     en: "Try changing the month, category or region.",
   },
   featured: { sl: "Izpostavljeno", en: "Featured" },

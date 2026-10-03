@@ -6,8 +6,8 @@
     },
     "badge": "Iskrena primerjava · brez prijave",
     "title": "Kateri AI načrtovalec potovanj je pravi za Slovenijo?",
-    "intro": "Ta primerjava ni marketinška brošura. Naše uredniško načelo je iskrenost — zato priznamo, kje so splošni načrtovalci boljši od nas, in pokažemo, kje specialist za Slovenijo vrne več. Odločitev prepustimo vam.",
-    "updated": "Posodobljeno: 28. september 2026. Primerjave staréjo — preverite datum pred odločitvijo.",
+    "intro": "Ta primerjava ni marketinška brošura. Naše uredniško načelo je iskrenost — zato priznamo, kje so splošni načrtovalci boljši od nas, in pokažemo, kje specialist za Slovenijo vrne več. Odločitev prepustimo tebi.",
+    "updated": "Posodobljeno: 28. september 2026. Primerjave staréjo — preveri datum pred odločitvijo.",
     "generalistsTitle": "Kaj splošni AI načrtovalci delajo odlično",
     "generalistsIntro": "Mindtrip, Layla, Wanderlog, ChatGPT in sorodniki so dobri izdelki (za trenutno dosegljivost glej terensko sekcijo zgoraj). Za naslednje primere je generalist pravilna izbira:",
     "generalists": {
@@ -70,7 +70,7 @@
         "offline": {
           "label": "Načrt brez povezave",
           "general": "Pogosto le v aplikacijah",
-          "ours": "Da — namestite kot aplikacijo (PWA)"
+          "ours": "Da — namesti kot aplikacijo (PWA)"
         },
         "beyond": {
           "label": "Potovanja izven Slovenije",
@@ -83,32 +83,32 @@
     "practiceTitle": "Kaj to pomeni v praksi",
     "practice": {
       "ex1Title": "December, 15:40, Vintgarska soteska",
-      "ex1Desc": "Generalist lahko sotesko mirno vključi v pozno popoldanski načrt. Naš načrtovalec ve, da pozimi ob 16:00 zapira, in vas opozori, naj jo prestavite dopoldan — z virom podatka.",
+      "ex1Desc": "Generalist lahko sotesko mirno vključi v pozno popoldanski načrt. Naš načrtovalec ve, da pozimi ob 16:00 zapira, in te opozori, naj jo prestaviš dopoldan — z virom podatka.",
       "ex2Title": "Bled → Bohinj »približno 30 minut«?",
       "ex2Desc": "Ocene časa »iz spomina modela« znajo odstopati. Povezovalniki med postanki pri nas nosijo dejanske kilometre in minute iz usmerjanja po pravih cestah — vključno z zimskimi odseki.",
-      "ex3Title": "Koliko vas bo dan res stal?",
+      "ex3Title": "Koliko te bo dan res stal?",
       "ex3Desc": "Cene vstopnic in lokalnih specialitet črpamo iz urejenega dataseta z viri — vsota na dnevni kartici nekaj pomeni. Kadar podatka ni, to povemo in dodamo opozorilo."
     },
-    "notForYouTitle": "Kdaj Discover Slovenia AI NI pravi za vas",
-    "notForYouBody": "Če načrtujete potovanje čez mejo, potrebujete letalske karte ali hotel v tujini — izberite generalista (Layla, Wanderlog ali klepet s ChatGPT/Gemini). To je v redu; tudi mi njih uporabljamo za tuja potovanja. Radi pa vas vidimo na slovenskem delu poti.",
-    "ctaTitle": "Poskusite brez prijave",
+    "notForYouTitle": "Kdaj Discover Slovenia AI NI pravi zate",
+    "notForYouBody": "Če načrtuješ potovanje čez mejo, potrebuješ letalske karte ali hotel v tujini — izberi generalista (Layla, Wanderlog ali klepet s ChatGPT/Gemini). To je v redu; tudi mi njih uporabljamo za tuja potovanja. Radi pa te vidimo na slovenskem delu poti.",
+    "ctaTitle": "Poskusi brez prijave",
     "ctaBody": "Od vprašanja do načrta: 30 sekund. Zahtevan račun: nič. Jezik: slovenščina, angleščina, italijanščina ali nemščina.",
     "ctaPrimary": "Sestavi moj načrt",
     "ctaSecondary": "Razišči destinacije",
     "faqTitle": "Pogosta vprašanja",
     "faq": {
       "q1": "Ali potrebujem račun, da načrtujem potovanje?",
-      "a1": "Ne. Načrt ustvarite, shranite in delite povsem brez prijave — deluje anonimno. Prosti račun je neobvezen in doda le zgodovino potovanj na strani Moja potovanja.",
+      "a1": "Ne. Načrt ustvariš, shraniš in deliš povsem brez prijave — deluje anonimno. Prosti račun je neobvezen in doda le zgodovino potovanj na strani Moja potovanja.",
       "q2": "Koliko stane uporaba?",
-      "a2": "Načrtovalec, itinererji, vodiči in deljenje so brezplačni. Platforma zasluži z rezervacijami lokalnih doživetij in prodajo na tržnici — ne z vašimi podatki.",
+      "a2": "Načrtovalec, itinererji, vodiči in deljenje so brezplačni. Platforma zasluži z rezervacijami lokalnih doživetij in prodajo na tržnici — ne s tvojimi podatki.",
       "q3": "Kaj če potujem izven Slovenije?",
-      "a3": "Iskreno: za čezmejna potovanja uporabite generalista (na primer Layla, Wanderlog, Mindtrip) ali klepet z AI. Mi pokrivamo samo Slovenijo — a jo pokrivamo globoko, s preverjenimi lokalnimi podatki.",
-      "q4": "Kako zanesljivi so vaši podatki?",
+      "a3": "Iskreno: za čezmejna potovanja uporabi generalista (na primer Layla, Wanderlog, Mindtrip) ali klepet z AI. Mi pokrivamo samo Slovenijo — a jo pokrivamo globoko, s preverjenimi lokalnimi podatki.",
+      "q4": "Kako zanesljivi so tvoji podatki?",
       "a4": "Podatke za destinacije urejamo uredniško, cene in odpiralni časi imajo vire, vsak načrt pa gre skozi geo-validacijo z opozorili. Kadar nismo prepričani, piše »preveri pred obiskom«. Metodologija je javna na strani Vir podatkov.",
       "q5": "Do zdaj sem uporabljal(a) Mindtrip — zakaj preklopiti?",
-      "a5": "Mindtrip je bil dober generalist; ob preverbi 28. 9. 2026 je bilo celo njihovo spletno okolje (stran, prijava, API) nedosegljivo, o vzroku pa ne moremo soditi. Za slovenska potovanja pri nas dobite: načrtovanje brez prijave, štiri jezike, preverjene lokalne podatke in rezervacije pri lokalnih ponudnikih. Presodite sami — poskus brez prijave traja 30 sekund.",
+      "a5": "Mindtrip je bil dober generalist; ob preverbi 28. 9. 2026 je bilo celo njihovo spletno okolje (stran, prijava, API) nedosegljivo, o vzroku pa ne moremo soditi. Za slovenska potovanja pri nas dobiš: načrtovanje brez prijave, štiri jezike, preverjene lokalne podatke in rezervacije pri lokalnih ponudnikih. Presodi sam — poskus brez prijave traja 30 sekund.",
       "q6": "Kaj se je zgodilo z Mindtripom?",
-      "a6": "Iskreno: vemo le, kar smo preverili. 28. septembra 2026 je celoten njihov spletni orodnik (mindtrip.ai, prijava, API) prikazoval stran »Under Construction«; o izpadu nismo našli medijske pokritosti, recenzije iz 22.–23. septembra pa jih medtem še uvrščajo med najboljša brezplačna AI orodja za načrtovanje. Ne ugibamo o vzrokih ali prihodnosti — trenutno stanje preverite neposredno pri njih."
+      "a6": "Iskreno: vemo le, kar smo preverili. 28. septembra 2026 je celoten njihov spletni orodnik (mindtrip.ai, prijava, API) prikazoval stran »Under Construction«; o izpadu nismo našli medijske pokritosti, recenzije iz 22.–23. septembra pa jih medtem še uvrščajo med najboljša brezplačna AI orodja za načrtovanje. Ne ugibamo o vzrokih ali prihodnosti — trenutno stanje preveri neposredno pri njih."
     },
     "sources": "Primerjava temelji na javno dostopnih recenzijah (2025–2026) in uredniški analizi platforme (september 2026). Več: <linkSources>vir podatkov</linkSources> · <linkTrust>zaupanje in varnost</linkTrust> · <linkAbout>o strani</linkAbout>",
     "ctaMap": "Odpri zemljevid",
@@ -118,7 +118,7 @@
     "fieldIntro": "Iskrena primerjava zahteva datirane preverbe, ne večne trditve. To so točkovne ugotovitve naših preverb (javni dostop do strani, uradni viri) — ko se teren spremeni, posodobimo to sekcijo.",
     "field": {
       "mindtripTitle": "Mindtrip: celoten spletni orodnik nedosegljiv",
-      "mindtripDesc": "Ob preverbi 28. 9. 2026 so mindtrip.ai, prijava in API prikazovali stran »Under Construction« (preusmeritev vodi na njihov CDN za slike). O izpadu nismo zasledili medijske pokritosti, recenzije iz 22.–23. 9. pa Mindtrip še navajajo med najboljšimi orodji — recenzijski cikel zaostaja za realnostjo. O vzroku ne ugibamo; trenutno stanje preverite pri njih.",
+      "mindtripDesc": "Ob preverbi 28. 9. 2026 so mindtrip.ai, prijava in API prikazovali stran »Under Construction« (preusmeritev vodi na njihov CDN za slike). O izpadu nismo zasledili medijske pokritosti, recenzije iz 22.–23. 9. pa Mindtrip še navajajo med najboljšimi orodji — recenzijski cikel zaostaja za realnostjo. O vzroku ne ugibamo; trenutno stanje preveri pri njih.",
       "laylaTitle": "Layla: za marsikaterega obiskovalca za zidom",
       "laylaDesc": "layla.ai je ob naših preverbah vračal napako 429 in varnostno preverjanje brskalnika; nekdanja tržna domena itslayla.com je danes nepovezana modna trgovina. Laylo je 31. 7. 2026 prevzela skupina Expedia — klepet-prvi lijaki v tej kategoriji zdaj stojijo na OTA denarju, kar še ne pomeni boljše izkušnje za vsakega obiskovalca.",
       "googleTitle": "Google: generični AI itinerarji so zdaj brezplačni",

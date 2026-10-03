@@ -27,7 +27,10 @@
     "accountHeading": "Račun",
     "login": "Prijava",
     "compare": "Primerjava",
-    "sheetSlogan": "AI vam sestavi itinerer v sekundah."
+    "sheetSlogan": "AI ti sestavi itinerer v sekundah.",
+    "languageAria": "Izberi jezik — trenutno {current}",
+    "languageHeading": "Jezik",
+    "languageSheetHint": "Preklop te pelje na isto stran v izbranem jeziku."
   },
   "hero": {
     "title": "Kaj želiš doživeti v Sloveniji?",
@@ -123,7 +126,7 @@
   },
   "homeDest": {
     "titleFeatured": "Priljubljene destinacije",
-    "titleAll": "Raziščite destinacije",
+    "titleAll": "Razišči destinacije",
     "subtitleFeatured": "Šest kotičkov, ki jih obiskovalci iščejo največ",
     "subtitleAll": "39 najlepših kotičkov zahodnega Balkana",
     "filters": "Filtri",
@@ -163,7 +166,7 @@
     "editorialShort": "uredniška",
     "moreInfo": "Več informacij",
     "emptyTitle": "Ni destinacij za izbrane filtre.",
-    "emptyHint": "Poskusite spremeniti filtre ali jih počistiti.",
+    "emptyHint": "Poskusi spremeniti filtre ali jih počisti.",
     "imageAlt": "{name} — {tagline}",
     "interestAll": "Vsi",
     "interestsAriaLabel": "Filtriraj po interesu",
@@ -174,7 +177,8 @@
     "sortRating": "Najbolj ocenjeno",
     "sortPrice": "Najcenejše",
     "cardPrice": "≈ {price} €",
-    "cardPriceSr": " · ocena cene na osebo"
+    "cardPriceSr": " · ocena cene na osebo",
+    "guideLink": "Vodnik"
   },
   "homeExp": {
     "eyebrow": "Doživetja",
@@ -221,13 +225,13 @@
   },
   "affiliate": {
     "badge": "Rezerviraj direktno",
-    "title": "Vse za vaše potovanje na enem mestu",
-    "subtitle": "Rezervacijo opravite neposredno pri partnerskem ponudniku. Discover Slovenia vam za uporabo povezave ne zaračuna ničesar.",
+    "title": "Vse za tvoje potovanje na enem mestu",
+    "subtitle": "Rezervacijo opraviš neposredno pri partnerskem ponudniku. Discover Slovenia ti za uporabo povezave ne zaračuna ničesar.",
     "partnerBadge": "Partnerska ponudba",
     "badgeShort": "Partner",
-    "tooltip": "Partnerska povezava — Preusmerjeni boste na zunanjo stran. Discover Slovenia AI lahko prejme provizijo.",
+    "tooltip": "Partnerska povezava — Preusmerjen boš na zunanjo stran. Discover Slovenia AI lahko prejme provizijo.",
     "book": "Rezerviraj",
-    "disclosure": "Nekatere povezave so partnerske povezave. Če prek njih opravite rezervacijo, lahko Discover Slovenia prejme partnersko provizijo. Cena za vas se zaradi tega ne poveča.",
+    "disclosure": "Nekatere povezave so partnerske povezave. Če prek njih opraviš rezervacijo, lahko Discover Slovenia prejme partnersko provizijo. Cena zate se zaradi tega ne poveča.",
     "carsLabel": "Najem avta",
     "carsDesc": "Iskanje po 10.000+ lokacijah. Brezplačna odpoved večinoma.",
     "carsAria": "Najemi avto prek DiscoverCars — odpre partnersko povezavo",
@@ -347,7 +351,7 @@
     "ariaLabel": "Noga strani",
     "brandAriaLabel": "Discover Slovenia AI — domov",
     "brandName": "Discover Slovenia AI",
-    "brandDescription": "Načrtovalec potovanj za Slovenijo in zahodni Balkan z realnimi podatki in determinističnim motorjem. Odkrijte 38 destinacij — Bled, Ljubljana, Piran in več.",
+    "brandDescription": "Načrtovalec potovanj za Slovenijo in zahodni Balkan z realnimi podatki in determinističnim motorjem. Odkrij 38 destinacij — Bled, Ljubljana, Piran in več.",
     "copyright": "© 2026 Discover Slovenia AI.",
     "exploreColumn": "Razišči",
     "exploreAllDestinations": "Vse destinacije",
@@ -367,7 +371,7 @@
     "planMyTrips": "Moja potovanja",
     "planLogin": "Prijava",
     "providersColumn": "Za ponudnike",
-    "providersBecomePartner": "Postanite partner",
+    "providersBecomePartner": "Postani partner",
     "providersLogin": "Prijava za partnerje",
     "providersPricing": "Paketi in cene",
     "providersSignup": "Prijavnica",
@@ -381,20 +385,20 @@
   },
   "chatbot": {
     "headerTitle": "Slovenija AI",
-    "headerSubtitle": "Vaš osebni vodič po Sloveniji",
-    "welcome": "Pozdravljen! 🇸🇮 Sem Slovenija AI — vaš osebni vodič po Sloveniji. Vprašajte me o destinacijah, lokalcih, izdelkih ali izkušnjah. Kako vam lahko pomagam?",
+    "headerSubtitle": "Tvoj osebni vodič po Sloveniji",
+    "welcome": "Pozdravljen! 🇸🇮 Sem Slovenija AI — tvoj osebni vodič po Sloveniji. Vprašaj me o destinacijah, lokalcih, izdelkih ali izkušnjah. Kako ti lahko pomagam?",
     "quickPromptsLabel": "Hitra vprašanja",
     "quickPrompt1": "Kaj obiskati v Sloveniji?",
     "quickPrompt2": "Priporoči romantični vikend",
     "quickPrompt3": "Kje lahko jedem v Ljubljani?",
     "quickPrompt4": "Kam z družino?",
-    "inputPlaceholder": "Vprašajte o Sloveniji...",
+    "inputPlaceholder": "Vprašaj o Sloveniji...",
     "inputAriaLabel": "Sporočilo za AI chatbot",
     "send": "Pošlji sporočilo",
     "clear": "Počisti pogovor",
     "cleared": "Pogovor počiščen",
     "thinking": "Iskanje po naši bazi…",
-    "offlineFallback": "Oprostite, trenutno imam težave z povezavo. Poskusite znova ali pa obiščite načrtovalca potovanj.",
+    "offlineFallback": "Oprosti, trenutno imam težave z povezavo. Poskusi znova ali pa obišči načrtovalca potovanj.",
     "fabOpen": "Odpri AI chatbot",
     "fabClose": "Zapri chatbot",
     "dialogAriaLabel": "AI chatbot pogovor",
@@ -428,7 +432,7 @@
     "provenanceT1Legend": "preverjeno (naši podatki)",
     "provenanceOsmTitle": "OpenStreetMap — skupnostni vir, ni uradno preverjeno",
     "provenanceOsmLegend": "OpenStreetMap (skupnostni vir)",
-    "osmNote": "Odpiralni časi so skupnostni podatek — pred obiskom preverite.",
+    "osmNote": "Odpiralni časi so skupnostni podatek — pred obiskom preveri.",
     "provenanceT2Title": "Uradni vir — Slovenska turistična organizacija (slovenia.info)",
     "provenanceT2Legend": "uradni vir STO (članek)",
     "stoNote": "Turkizni pini so uradni članki STO — povezava odpre izvirnik na slovenia.info.",
@@ -440,16 +444,16 @@
     "catDestination": "Destinacije",
     "catService": "Storitve",
     "catSource": "Uradni viri",
-    "catEmpty": "Vse kategorije so izklopljene — prikažite vsaj eno.",
+    "catEmpty": "Vse kategorije so izklopljene — prikaži vsaj eno.",
     "catEmptyReset": "Prikaži vse",
     "addPlace": "Dodaj v načrt",
     "addPlaceAria": "Dodaj {name} v načrt",
     "addPlaceDone": "Dodano v načrt",
     "addPlaceAddedTitle": "Dodano v načrt",
-    "addPlaceAddedDesc": "{name} · Dan {day} — poglejte ga na strani Načrtuj",
+    "addPlaceAddedDesc": "{name} · Dan {day} — poglej ga na strani Načrtuj",
     "addPlaceDuplicateTitle": "Že v načrtu",
     "addPlaceNoPlanTitle": "Ni še načrta",
-    "addPlaceNoPlanDesc": "{name} smo shranili — ustvarite načrt na strani Načrtuj in dodali ga bomo samodejno.",
+    "addPlaceNoPlanDesc": "{name} smo shranili — ustvari načrt na strani Načrtuj in dodali ga bomo samodejno.",
     "voiceStart": "Dikiraj vprašanje (mikrofon)",
     "voiceStop": "Ustavi diktiranje",
     "voiceListening": "Poslušam … govori",
@@ -581,13 +585,13 @@
     "validationBudget": "Proračun mora biti večji od 0 €.",
     "validationBudgetMax": "Proračun mora biti največ 100.000 €.",
     "validationGroupSize": "Velikost skupine mora biti celo število med 1 in 20.",
-    "validationInterests": "Izberite vsaj en interes.",
+    "validationInterests": "Izberi vsaj en interes.",
     "validationStartDate": "Datum odhoda je neveljaven — izberi današnji ali prihodnji datum.",
-    "validationToastTitle": "Preverite vnose",
+    "validationToastTitle": "Preveri vnose",
     "errorGenerating": "Napaka pri generiranju",
     "errorGeneratingFallback": "Napaka pri generiranju itinererja",
-    "emptyTitle": "Vaš itinerer se bo prikazal tukaj",
-    "emptyHint": "Izpolnite obrazec in kliknite »Generiraj itinerer«.",
+    "emptyTitle": "Tvoj itinerer se bo prikazal tukaj",
+    "emptyHint": "Izpolni obrazec in klikni »Generiraj itinerer«.",
     "emptyDemoChip": "Primer načrta",
     "emptyDemoDayLabel": "Dan 1 · Gorenjska",
     "emptyDemoCaption": "Tako izgleda povzetek dneva — časi, cene in razdalje med postanki.",
@@ -595,7 +599,7 @@
     "emptyDemoQuery": "Bled, Vintgarska soteska in Bohinj — 1 dan v naravi",
     "restoredChip": "Obnovljen tvoj zadnji načrt",
     "restoredChipDismiss": "Skrij obvestilo o obnovljenem načrtu",
-    "resultTitle": "Vaš {days}-dnevni itinerer",
+    "resultTitle": "Tvoj {days}-dnevni itinerer",
     "badgeAI": "AI",
     "badgeSample": "Predlog",
     "badgeDeterministic": "Brez AI",
@@ -658,7 +662,7 @@
     "sharedOpenError": "Deljenega načrta ni bilo mogoče odpreti.",
     "addedToTripToast": "Dodano v tvojo pot ✨",
     "generatedToast": "Itinerer generiran!",
-    "generatedToastDescAI": "Načrtovalec je sestavil vaš popoln načrt potovanja.",
+    "generatedToastDescAI": "Načrtovalec je sestavil tvoj popoln načrt potovanja.",
     "generatedToastDescSample": "Prikazan je pripravljen predlog itinererja.",
     "savedToast": "Načrt shranjen!",
     "savedToastDesc": "Našel ga boš v Moja potovanja. Naslednji korak: rezerviraj ponudnike ali Zaženi Na poti. Povezavo za deljenje lahko kopiraš spodaj.",
@@ -895,10 +899,10 @@
       "ctaEsim": "eSIM",
       "ctaInsurance": "Zavarovanje",
       "hotelsDesc": "Iskanje hotelov in apartmajev v {dest}",
-      "hotelsEmpty": "V bazi še ni hotelov za {dest}. Rezervirajte prek Booking.com zgoraj.",
-      "activitiesDesc": "Oglejte si vodene ture in izkušnje v {dest}",
+      "hotelsEmpty": "V bazi še ni hotelov za {dest}. Rezerviraj prek Booking.com zgoraj.",
+      "activitiesDesc": "Oglej si vodene ture in izkušnje v {dest}",
       "ticketsDesc": "Vstopnice za znamenitosti in muzeje — brez čakanja v vrsti",
-      "activitiesEmpty": "V bazi še ni izkušenj za {dest}. Poiščite aktivnosti na GetYourGuide zgoraj.",
+      "activitiesEmpty": "V bazi še ni izkušenj za {dest}. Poišči aktivnosti na GetYourGuide zgoraj.",
       "localProducts": "Lokalni izdelki",
       "diningEmpty": "V bazi še ni restavrac ali lokalnih izdelkov za {dest}.",
       "carsDesc": "Najem avta v {dest} — prilagodljivi datumi prevzema",
@@ -952,7 +956,7 @@
       "destinationsTitle": "38 destinacij",
       "destinationsDesc": "Od Alp do Jadrana — z interaktivnim zemljevidom in tisoči lokalnih točk.",
       "providersTitle": "Lokalni ponudniki",
-      "providersDesc": "Neposredne povezave do hotelov, restavracij in aktivnosti — rezervacija vedno pri ponudniku, brez dodatnih stroškov za vas.",
+      "providersDesc": "Neposredne povezave do hotelov, restavracij in aktivnosti — rezervacija vedno pri ponudniku, brez dodatnih stroškov zate.",
       "languagesTitle": "4 jeziki",
       "languagesDesc": "Slovenščina, angleščina, nemščina in italijanščina za globalne turiste."
     },
@@ -960,7 +964,7 @@
     "howP1": "Platforma ne pobira provizij od rezervacij. Namesto tega lokalni ponudniki plačujejo pavšalno mesečno naročnino za prisotnost na platformi. Uporabniki vedno rezervirajo neposredno pri ponudniku — brez posrednikov.",
     "howP2": "Načrtovalec itinererjev je DETERMINISTIČNI motor — čista koda nad realnimi podatki, 0 AI žetonov (Issue #9). Podatki o točkah interesa (POI) prihajajo iz <osm>OpenStreetMap</osm> in <wiki>Wikipedie</wiki>. Vremenski podatki iz <meteo>Open-Meteo</meteo>.",
     "contactTitle": "Kontakt",
-    "contactP": "Imate vprašanja? Pišite nam na <email>info@discoverslovenia.ai</email> ali obiščite <contactPage>kontaktno stran</contactPage>.",
+    "contactP": "Imaš vprašanja? Piši nam na <email>info@discoverslovenia.ai</email> ali obišči <contactPage>kontaktno stran</contactPage>.",
     "dataTitle": "Podatki",
     "dataTech": "Tehnologija:",
     "dataAi": "AI:",
@@ -980,18 +984,18 @@
     "linkSources": "Vir podatkov",
     "meta": {
       "title": "O strani",
-      "description": "Discover Slovenia AI je AI-poganjana turistična platforma za Slovenijo. Spoznajte našo ekipo, misijo in kako platforma deluje."
+      "description": "Discover Slovenia AI je AI-poganjana turistična platforma za Slovenijo. Spoznaj našo ekipo, misijo in kako platforma deluje."
     }
   },
   "affiliateCta": {
     "sectionAria": "Rezervacija za {destination}",
-    "title": "Rezervirajte svoj obisk {destination}",
-    "subtitle": "Povežemo vas z preverjenimi partnerji — rezervirate direktno pri njih, brez posrednikov in brez dodatnih stroškov.",
-    "disclosure": "Partnerske povezave: Booking.com, DiscoverCars, GetYourGuide. Če prek njih opravite rezervacijo, lahko prejmemo provizijo — cena za vas se ne poveča.",
+    "title": "Rezerviraj svoj obisk {destination}",
+    "subtitle": "Povežemo te s preverjenimi partnerji — rezerviraš direktno pri njih, brez posrednikov in brez dodatnih stroškov.",
+    "disclosure": "Partnerske povezave: Booking.com, DiscoverCars, GetYourGuide. Če prek njih opraviš rezervacijo, lahko prejmemo provizijo — cena zate se ne poveča.",
     "hotels": {
       "label": "Nastanitev",
       "title": "Hoteli in apartmaji",
-      "desc": "Poiščite hotele in apartmaje v {destination}.",
+      "desc": "Poišči hotele in apartmaje v {destination}.",
       "cta": "Poišči nastanitev",
       "aria": "Poišči nastanitev v {destination} — odpre Booking.com (partnerska povezava)"
     },
@@ -1051,15 +1055,15 @@
       "q2": "Kakšno je vreme v {name} {seasonLower}?",
       "a2": "V {seasonLower} so temperature v {name} običajno {temp}. Priporočamo slojevito oblačenje.",
       "q3": "Katere aktivnosti so na voljo v {name} {seasonLower}?",
-      "a3": "{season} v {name} ponuja različne aktivnosti — od pohodništva do kulinarike. Preverite naš seznam stvari za početi v {name}.",
+      "a3": "{season} v {name} ponuja različne aktivnosti — od pohodništva do kulinarike. Preveri naš seznam stvari za početi v {name}.",
       "q4": "Ali potrebujem rezervacijo za obisk {name}?",
-      "a4": "Priporočamo rezervacijo nastanitve vsaj 2 tedna vnaprej, še posebej v sezoni. Uporabite naš AI načrtovalec za optimizacijo itinererja."
+      "a4": "Priporočamo rezervacijo nastanitve vsaj 2 tedna vnaprej, še posebej v sezoni. Uporabi naš AI načrtovalec za optimizacijo itinererja."
     },
-    "ctaTitle": "Načrtujte {seasonLower} potovanje v {name}",
-    "ctaText": "AI upošteva sezono, vreme in vaše interese za popoln načrt.",
+    "ctaTitle": "Načrtuj {seasonLower} potovanje v {name}",
+    "ctaText": "AI upošteva sezono, vreme in tvoje interese za popoln načrt.",
     "ctaButton": "Sestavi itinerer",
     "ctaThingsToDo": "Kaj početi v {name}",
-    "exploreTitle": "Raziščite tudi",
+    "exploreTitle": "Razišči tudi",
     "meta": {
       "notFound": "Stran ni najdena",
       "title": "Najboljši čas za obisk {name} — {season}",
@@ -1130,7 +1134,7 @@
   },
   "contact": {
     "title": "Kontakt",
-    "intro": "Imate vprašanja o platformi, sodelovanju ali tehničnih zadevah? Pišite nam.",
+    "intro": "Imaš vprašanja o platformi, sodelovanju ali tehničnih zadevah? Piši nam.",
     "cards": {
       "emailTitle": "Email",
       "locationTitle": "Lokacija",
@@ -1140,11 +1144,11 @@
       "supportTitle": "Tehnična podpora"
     },
     "providersTitle": "Za ponudnike",
-    "providersText": "Želite postati del platforme? Registrirajte se na portalu za ponudnike.",
+    "providersText": "Želiš postati del platforme? Registriraj se na portalu za ponudnike.",
     "providersLink": "Registracija ponudnika →",
     "meta": {
       "title": "Kontakt",
-      "description": "Stopite v stik z ekipo Discover Slovenia AI. Email, telefon in kontaktne informacije."
+      "description": "Stopi v stik z ekipo Discover Slovenia AI. Email, telefon in kontaktne informacije."
     }
   },
   "dataSources": {
@@ -1259,7 +1263,7 @@
   },
   "demoScenarios": {
     "badge": "Preizkusi v 30 sekundah",
-    "title": "Kaj želiš doživeti?",
+    "title": "Sestavi načrt v 30 sekundah",
     "subtitle": "Klikni eno od možnosti in AI takoj sestavi tvoj načrt",
     "customTitle": "Napiši svoje",
     "customSubtitle": "Ali prelijči zgoraj",
@@ -1301,11 +1305,11 @@
   "destinationsPage": {
     "badge": "Destinacije",
     "title": "Vseh 38 destinacij — Slovenija in zahodni Balkan",
-    "subtitle": "Od Bledega jezera in vrhov Julijcev do ozkih piranskih ulic — filtrirajte po regiji, interesi, tipu in ceni ter poiščite svoj kotiček Slovenije.",
+    "subtitle": "Od Bledega jezera in vrhov Julijcev do ozkih piranskih ulic — filtriraj po regiji, interesi, tipu in ceni ter poišči svoj kotiček Slovenije.",
     "statsLine": "38 destinacij · 6 filtrov · Brez prijave",
     "meta": {
       "title": "Vseh 38 destinacij — Slovenija in zahodni Balkan",
-      "description": "Raziščite 38 destinacij Slovenije in zahodnega Balkana — od Bledega jezera do Sarande. Filtri po državi, regiji, interesih, tipu, ceni in oceni."
+      "description": "Razišči 38 destinacij Slovenije in zahodnega Balkana — od Bledega jezera do Sarande. Filtri po državi, regiji, interesih, tipu, ceni in oceni."
     }
   },
   "guidePage": {
@@ -1327,12 +1331,12 @@
     "bestTimeTitle": "Najboljši čas za obisk {name}",
     "bestTimeDesc": "Vodič po sezonah — pomlad, poletje, jesen, zima.",
     "faqTitle": "Pogosta vprašanja",
-    "ctaTitle": "Sestavite popoln {labelLower} v {name}",
-    "ctaP": "AI upošteva vaš proračun, interese in čas. {description}",
+    "ctaTitle": "Sestavi popoln {labelLower} v {name}",
+    "ctaP": "AI upošteva tvoj proračun, interese in čas. {description}",
     "ctaPlanner": "Načrtovalec potovanj",
     "ctaItineraries": "Pripravljeni itinererji",
     "elsewhereTitle": "{label} tudi drugje",
-    "elsewhereDesc": "Raziščite {labelLower} v drugih slovenskih destinacijah:",
+    "elsewhereDesc": "Razišči {labelLower} v drugih slovenskih destinacijah:",
     "meta": {
       "title": "{title} — Vodnik {labelLower}",
       "ogDescription": "{description} Vodnik za {name}.",
@@ -1349,7 +1353,7 @@
         "q3": "Kdaj je najboljši čas za romantični obisk {name}?",
         "a3": "Pomlad (april–junij) in zgodnja jesen (september–oktober) ponujata najbolj romantično vzdušje v {name} — prijetne temperature, manj turistov in čudovite barve narave.",
         "q4": "Katere nastanitve v {name} so najbolj romantične?",
-        "a4": "Za romantični pobeg priporočamo boutique hotele in nastanitve z razgledom. Preverite naše sezname lokalov v {name} — vsi imajo ročno izbrane ponudnike."
+        "a4": "Za romantični pobeg priporočamo boutique hotele in nastanitve z razgledom. Preveri naše sezname lokalov v {name} — vsi imajo ročno izbrane ponudnike."
       },
       "druzinski": {
         "q1": "Ali je {name} primeren za obisk z otroki?",
@@ -1363,11 +1367,11 @@
       },
       "budget": {
         "q1": "Koliko stane obisk {name} z omejenim proračunom?",
-        "a1": "Z omejenim proračunom lahko {name} obiščete za {price}, vključno z nastanitvijo v hostelih ali zasebnih sobah, lokalno hrano na tržnicah in brezplačnimi aktivnostmi.",
+        "a1": "Z omejenim proračunom lahko {name} obiščeš za {price}, vključno z nastanitvijo v hostelih ali zasebnih sobah, lokalno hrano na tržnicah in brezplačnimi aktivnostmi.",
         "q2": "Katere brezplačne aktivnosti so na voljo v {name}?",
         "a2": "{name} ponuja številne brezplačne aktivnosti — sprehode po starem mestu, obisk cerkva, pohodne poti v okolici in javne plaže. Vstopnice za muzeje imajo pogosto popuste za študente.",
         "q3": "Kako prihraniti pri prevozu do {name}?",
-        "a3": "Za ugoden prevoz do {name} priporočamo vlak ali avtobus (iskanje preko FlixBus ali slovenskih železnic). V {name} lahko uporabite javni mestni transport ali kolo (veliko destinacij ima sisteme izposoje).",
+        "a3": "Za ugoden prevoz do {name} priporočamo vlak ali avtobus (iskanje preko FlixBus ali slovenskih železnic). V {name} lahko uporabiš javni mestni transport ali kolo (veliko destinacij ima sisteme izposoje).",
         "q4": "Ali najdem poceni nastanitev v {name}?",
         "a4": "Da — v {name} so na voljo hostli, zasebne sobe preko Airbnb in družinski penzioni. Cene so nižje izven sezone (november–marec, razen praznikov)."
       },
@@ -1375,15 +1379,15 @@
         "q1": "Kaj početi v {name} med vikendom?",
         "a1": "Vikend v {name} omogoča raziskovanje glavnih znamenitosti, lokalne kulinarike in vsaj ene izkušnje. Petek zvečer je idealen za prihod in sprehod, sobota za glavne atrakcije, nedelja za sprostitev.",
         "q2": "Koliko stane vikend v {name}?",
-        "a2": "Vikend v {name} (2 nočitvi, 3 obroki na dan, atrakcije) stane približno {price}. Prihranite lahko z early-bird rezervacijami in lokalnimi tržnicami.",
+        "a2": "Vikend v {name} (2 nočitvi, 3 obroki na dan, atrakcije) stane približno {price}. Prihraniš lahko z early-bird rezervacijami in lokalnimi tržnicami.",
         "q3": "Kdaj je najboljši čas za vikend pobeg v {name}?",
         "a3": "{name} je odličen za vikend pobeg skozi vse leto. Pomlad in jesen ponujata najboljše vreme za raziskovanje, poleti je več dogodkov, pozimi pa manj turistov in nižje cene.",
         "q4": "Kako priti do {name} za vikend?",
         "a4": "{name} je dostopen z avtomobilom, vlakom ali avtobusom. Priporočamo rezervacijo prevoza vsaj teden dni vnaprej, še posebej za petek popoldan."
       },
       "ai": {
-        "q": "Ali lahko sestavite itinerer za {name}?",
-        "a": "Da — načrtovalec lahko sestavi popolnoma prilagojen itinerer za {name}, ki upošteva vaše interese, proračun in čas. Preizkusite ga na strani Načrtuj."
+        "q": "Ali lahko sestaviš itinerer za {name}?",
+        "a": "Da — načrtovalec lahko sestavi popolnoma prilagojen itinerer za {name}, ki upošteva tvoje interese, proračun in čas. Preizkusi ga na strani Načrtuj."
       }
     },
     "guideTypes": {
@@ -1399,15 +1403,15 @@
         "metaKeyword": "romantika",
         "h1": {
           "title": "Romantični sprehod ob {hl1}",
-          "description": "Začnite dan z umirjenim sprehodom ob {hl1Lower} v {name}. Jutranja svetloba in manj turistov ustvarjata idealno vzdušje za par."
+          "description": "Začni dan z umirjenim sprehodom ob {hl1Lower} v {name}. Jutranja svetloba in manj turistov ustvarjata idealno vzdušje."
         },
         "h2": {
           "title": "Zasebna izkušnja: {hl2}",
-          "description": "Popoldne si vzemite čas za zasebno izkušnjo v {name} — degustacija, vožnja z ladjico ali lokalna delavnica. Naša priporočila so preverjena za pare."
+          "description": "Popoldne si vzemi čas za zasebno izkušnjo v {name} — degustacija, vožnja z ladjico ali lokalna delavnica. Naša priporočila so preverjena za pare."
         },
         "h3": {
           "title": "Večerja ob svečkah v {name}",
-          "description": "Zaključite dan z romantično večerjo v eni izmed izbranih restavracij v {name}. Lokalni kuharji ponujajo sezonske menije z vino slovenskih vinogradov."
+          "description": "Zaključi dan z romantično večerjo v eni izmed izbranih restavracij v {name}. Lokalni kuharji ponujajo sezonske menije z vino slovenskih vinogradov."
         }
       },
       "druzinski": {
@@ -1430,7 +1434,7 @@
         },
         "h3": {
           "title": "Družinska večerja v {name}",
-          "description": "Izberite restavracijo z otroškim menijem v {name}. Lokalne pice, testenine in tradicionalne slovenske jedi so priljubljene pri vseh starostih."
+          "description": "Izberi restavracijo z otroškim menijem v {name}. Lokalne pice, testenine in tradicionalne slovenske jedi so priljubljene pri vseh starostih."
         }
       },
       "budget": {
@@ -1449,7 +1453,7 @@
         },
         "h2": {
           "title": "Piknik ob {hl2}",
-          "description": "Kupite lokalne siri, kruh in sadje na tržnici v {name} in si organizirajte piknik. Prihranek pri obroku omogoča več za izkušnje."
+          "description": "Kupi lokalne siri, kruh in sadje na tržnici v {name} in si organiziraj piknik. Prihranek pri obroku omogoča več za izkušnje."
         },
         "h3": {
           "title": "Pohod do {hl3}",
@@ -1468,15 +1472,15 @@
         "metaKeyword": "vikend pobeg",
         "h1": {
           "title": "Petek: prihod in sprehod po {name}",
-          "description": "Po prihodu v {name} se namestite in si vzemite čas za sproščen sprehod po starem mestu. Uživajte v lokalni kavi in načrtujte naslednja dva dneva."
+          "description": "Po prihodu v {name} se namesti in si vzemi čas za sproščen sprehod po starem mestu. Uživaj v lokalni kavi in načrtuj naslednja dva dneva."
         },
         "h2": {
           "title": "Sobota: {hl1} in okolica",
-          "description": "Glavni dan namenite glavnim znamenitostim — {hl1Lower}, lokalni muzej in kosilo v tradicionalni restavraciji v {name}."
+          "description": "Glavni dan nameni glavnim znamenitostim — {hl1Lower}, lokalni muzej in kosilo v tradicionalni restavraciji v {name}."
         },
         "h3": {
           "title": "Nedelja: {hl2} in odhod",
-          "description": "Zadnji dan izkoristite za {hl2Lower} in nakup lokalnih spominov. Pred odhodom še ena lokalna kavica v {name}."
+          "description": "Zadnji dan izkoristi za {hl2Lower} in nakup lokalnih spominov. Pred odhodom še ena lokalna kavica v {name}."
         }
       }
     }
@@ -1538,8 +1542,8 @@
     "travelerTypesTitle": "Itinerarji po tipu popotnika",
     "generateButton": "Generiraj itinerer",
     "otherDestinationsTitle": "Ostale destinacije",
-    "personalizedTitle": "Želite personaliziran itinerer?",
-    "personalizedText": "Naš AI upošteva vaš proračun, interese in sezono za popoln načrt.",
+    "personalizedTitle": "Želiš personaliziran itinerer?",
+    "personalizedText": "Naš AI upošteva tvoj proračun, interese in sezono za popoln načrt.",
     "personalizedButton": "Generiraj itinerer",
     "meta": {
       "notFound": "Itinerer ni najden",
@@ -1908,15 +1912,15 @@
       "zima": "Zima"
     },
     "faqTitle": "Pogosta vprašanja",
-    "planTitle": "Načrtujte potovanje v {name}",
-    "planText": "Sestavimo vam popoln itinerer za {name} in okolico — prilagojen vašemu proračunu, interesom in sezoni.",
+    "planTitle": "Načrtuj potovanje v {name}",
+    "planText": "Sestavimo ti popoln itinerer za {name} in okolico — prilagojen tvojemu proračunu, interesom in sezoni.",
     "planButton": "Načrtovalec potovanj",
-    "exploreTitle": "Raziščite tudi",
+    "exploreTitle": "Razišči tudi",
     "trackerTitle": "Kaj početi v {name} — Vodnik",
     "meta": {
       "notFound": "Destinacija ni najdena",
       "title": "Kaj početi v {name} — Vodnik {name}",
-      "description": "Odkrijte najboljše aktivnosti, atrakcije in izkušnje v {name}, {tagline}. Vodnik z {count} glavnimi znamenitosti, lokalnimi ponudniki in AI-priporočili.",
+      "description": "Odkrij najboljše aktivnosti, atrakcije in izkušnje v {name}, {tagline}. Vodnik z {count} glavnimi znamenitosti, lokalnimi ponudniki in AI-priporočili.",
       "ogTitle": "Kaj početi v {name} — Discover Slovenia AI",
       "ogDescription": "{count} znamenitosti, lokalne restavracije, aktivnosti in izkušnje v {name}."
     }
@@ -1924,7 +1928,7 @@
   "trustSafety": {
     "hero": {
       "title": "Zaupanje in varnost",
-      "subtitle": "Kako preverjamo partnerje, kako deluje AI ranking in kako varujemo vaše podatke."
+      "subtitle": "Kako preverjamo partnerje, kako deluje AI ranking in kako varujemo tvoje podatke."
     },
     "partner": {
       "title": "Kako preverjamo partnerje",
@@ -2004,7 +2008,7 @@
     },
     "meta": {
       "title": "Zaupanje in varnost",
-      "description": "Kako preverjamo partnerje, kako deluje AI ranking in kako varujemo vaše podatke."
+      "description": "Kako preverjamo partnerje, kako deluje AI ranking in kako varujemo tvoje podatke."
     }
   },
   "welcomeBack": {
@@ -2070,12 +2074,12 @@
     },
     "aiCta": {
       "title": "Najprej Slovenija, potem Jadran",
-      "body": "Preden se odpravite na jug, si sestavite slovenski del poti — načrtovalec pripravi itinerer od Blejskega jezera do Pirana, prilagojen proračunu in sezoni.",
+      "body": "Preden se odpraviš na jug, si sestavi slovenski del poti — načrtovalec pripravi itinerer od Bledega jezera do Pirana, prilagojen proračunu in sezoni.",
       "button": "Načrtovalec potovanj"
     },
     "aiCtaLoop": {
       "title": "Krog po meri",
-      "body": "Ta krog je izhodišče — načrtovalec pripravi itinerer po Sloveniji, prilagojen vašemu proračunu, sezoni in dnevu odhoda.",
+      "body": "Ta krog je izhodišče — načrtovalec pripravi itinerer po Sloveniji, prilagojen tvojemu proračunu, sezoni in dnevu odhoda.",
       "button": "Načrtovalec potovanj"
     },
     "related": {
@@ -2098,7 +2102,7 @@
     "badge": "Vodiči",
     "title": "Vodiči in nasveti za Slovenijo",
     "intro": "Kaj početi na Bledu, kako preživeti 3 dni po Sloveniji, najlepši izleti in kje jesti lokalno — vodiči, nasveti in odgovori lokalcev.",
-    "editorsLine": "Zgodbe in nasveti urednikov · Vprašajte lokalce",
+    "editorsLine": "Zgodbe in nasveti urednikov · Vprašaj lokalce",
     "loops": {
       "badge": "Domači krog",
       "title": "Slovenija v enem krogu",
@@ -2124,7 +2128,7 @@
   "blogSection": {
     "badge": "Blog & vodičniki",
     "title": "Zgodbe iz Slovenije",
-    "intro": "Vodičniki, nasveti in inspiracije za vaše naslednje potovanje",
+    "intro": "Vodičniki, nasveti in inspiracije za tvoje naslednje potovanje",
     "readMore": "Preberi več",
     "readTime": "{minutes} min branja",
     "readArticleAria": "Preberi članek: {title}",
@@ -2132,7 +2136,7 @@
     "relatedDestination": "Povezana destinacija",
     "exploreDestination": "Razišči destinacijo",
     "emptyTitle": "V tej kategoriji ni člankov.",
-    "emptyDescription": "Poskusite izbrati drugo kategorijo."
+    "emptyDescription": "Poskusi izbrati drugo kategorijo."
   },
   "destinationPage": {
     "breadcrumbHome": "Domov",
@@ -2182,15 +2186,15 @@
       "zima": "Zima"
     },
     "plan": {
-      "title": "Načrtujte potovanje v {name}",
-      "text": "Sestavimo vam popoln itinerer za {name} in okolico — prilagojen vašim interesom, datumom, vremenu in sestavi potne skupine.",
+      "title": "Načrtuj potovanje v {name}",
+      "text": "Sestavimo ti popoln itinerer za {name} in okolico — prilagojen tvojim interesom, datumom, vremenu in sestavi potne skupine.",
       "button": "Načrtovalec potovanj"
     },
     "nearby": {
       "title": "Blizu — regija {region}"
     },
     "explore": {
-      "title": "Raziščite tudi",
+      "title": "Razišči tudi",
       "all": "Vse destinacije"
     },
     "trackerTitle": "{name} — Destinacija",
@@ -2208,12 +2212,12 @@
     "install": "Namesti aplikacijo",
     "installAria": "Namesti aplikacijo (deluje tudi brez povezave)",
     "installIosTitle": "Namestitev na iPhone/iPad",
-    "installIosHint": "Safari ne omogoča gumba za namestitev — uporabite meni Deli:",
-    "installIosStep1": "Tapnite gumb Deli (kvadrat s puščico gor) v vrstici Safari",
-    "installIosStep2": "Izberite »Dodaj na domači zaslon«",
-    "installIosStep3": "Potrdite — aplikacija se odpre čez cel zaslon, načrti pa ostanejo dostopni tudi brez povezave",
+    "installIosHint": "Safari ne omogoča gumba za namestitev — uporabi meni Deli:",
+    "installIosStep1": "Tapni gumb Deli (kvadrat s puščico gor) v vrstici Safari",
+    "installIosStep2": "Izberi »Dodaj na domači zaslon«",
+    "installIosStep3": "Potrdi — aplikacija se odpre čez cel zaslon, načrti pa ostanejo dostopni tudi brez povezave",
     "installDoneTitle": "Aplikacija je nameščena",
-    "installDoneBody": "Discover Slovenia AI je zdaj na vašem domačem zaslonu — načrti so na voljo tudi brez povezave.",
+    "installDoneBody": "Discover Slovenia AI je zdaj na tvojem domačem zaslonu — načrti so na voljo tudi brez povezave.",
     "offline": "Brez povezave",
     "offlineAria": "Brez povezave — načrti so na voljo",
     "offlineToastTitle": "Brez povezave",
@@ -2221,14 +2225,14 @@
     "onlineToastTitle": "Povezava je vzpostavljena",
     "onlineToastBody": "Vsi podatki se znova osvežujejo.",
     "updateTitle": "Nova različica aplikacije",
-    "updateBody": "Pripravili smo posodobitev. Osvežite stran, da dejansko stopi v veljavo.",
+    "updateBody": "Pripravili smo posodobitev. Osveži stran, da dejansko stopi v veljavo.",
     "updateAction": "Osveži"
   },
   "validatorTelemetry": {
     "sectionAriaLabel": "Javna telemetrija preverjevalnika načrtov",
     "eyebrow": "Telemetrija · javne številke · 0 AI žetonov",
     "title": "Koliko napak ujame naš preverjevalnik?",
-    "subtitle": "Vsak drug vam obljublja natančnost. Mi jo štejemo: vsako dokončano preverjanje načrta se zabeleži na strežniku, vsako opozorilo po vrsti — in številke so javne za vse.",
+    "subtitle": "Vsak drug ti obljublja natančnost. Mi jo štejemo: vsako dokončano preverjanje načrta se zabeleži na strežniku, vsako opozorilo po vrsti — in številke so javne za vse.",
     "liveTitle": "Naša števila (šteta na strežniku, brez osebnih podatkov)",
     "detailsSummary": "Podrobnosti štetja in javne študije",
     "stats": {
@@ -2299,8 +2303,8 @@
     },
     "badge": "Iskrena primerjava · brez prijave",
     "title": "Kateri AI načrtovalec potovanj je pravi za Slovenijo?",
-    "intro": "Ta primerjava ni marketinška brošura. Naše uredniško načelo je iskrenost — zato priznamo, kje so splošni načrtovalci boljši od nas, in pokažemo, kje specialist za Slovenijo vrne več. Odločitev prepustimo vam.",
-    "updated": "Posodobljeno: 28. september 2026. Primerjave staréjo — preverite datum pred odločitvijo.",
+    "intro": "Ta primerjava ni marketinška brošura. Naše uredniško načelo je iskrenost — zato priznamo, kje so splošni načrtovalci boljši od nas, in pokažemo, kje specialist za Slovenijo vrne več. Odločitev prepustimo tebi.",
+    "updated": "Posodobljeno: 28. september 2026. Primerjave staréjo — preveri datum pred odločitvijo.",
     "generalistsTitle": "Kaj splošni AI načrtovalci delajo odlično",
     "generalistsIntro": "Mindtrip, Layla, Wanderlog, ChatGPT in sorodniki so dobri izdelki (za trenutno dosegljivost glej terensko sekcijo zgoraj). Za naslednje primere je generalist pravilna izbira:",
     "generalists": {
@@ -2363,7 +2367,7 @@
         "offline": {
           "label": "Načrt brez povezave",
           "general": "Pogosto le v aplikacijah",
-          "ours": "Da — namestite kot aplikacijo (PWA)"
+          "ours": "Da — namesti kot aplikacijo (PWA)"
         },
         "beyond": {
           "label": "Potovanja izven Slovenije",
@@ -2376,32 +2380,32 @@
     "practiceTitle": "Kaj to pomeni v praksi",
     "practice": {
       "ex1Title": "December, 15:40, Vintgarska soteska",
-      "ex1Desc": "Generalist lahko sotesko mirno vključi v pozno popoldanski načrt. Naš načrtovalec ve, da pozimi ob 16:00 zapira, in vas opozori, naj jo prestavite dopoldan — z virom podatka.",
+      "ex1Desc": "Generalist lahko sotesko mirno vključi v pozno popoldanski načrt. Naš načrtovalec ve, da pozimi ob 16:00 zapira, in te opozori, naj jo prestaviš dopoldan — z virom podatka.",
       "ex2Title": "Bled → Bohinj »približno 30 minut«?",
       "ex2Desc": "Ocene časa »iz spomina modela« znajo odstopati. Povezovalniki med postanki pri nas nosijo dejanske kilometre in minute iz usmerjanja po pravih cestah — vključno z zimskimi odseki.",
-      "ex3Title": "Koliko vas bo dan res stal?",
+      "ex3Title": "Koliko te bo dan res stal?",
       "ex3Desc": "Cene vstopnic in lokalnih specialitet črpamo iz urejenega dataseta z viri — vsota na dnevni kartici nekaj pomeni. Kadar podatka ni, to povemo in dodamo opozorilo."
     },
-    "notForYouTitle": "Kdaj Discover Slovenia AI NI pravi za vas",
-    "notForYouBody": "Če načrtujete potovanje čez mejo, potrebujete letalske karte ali hotel v tujini — izberite generalista (Layla, Wanderlog ali klepet s ChatGPT/Gemini). To je v redu; tudi mi njih uporabljamo za tuja potovanja. Radi pa vas vidimo na slovenskem delu poti.",
-    "ctaTitle": "Poskusite brez prijave",
+    "notForYouTitle": "Kdaj Discover Slovenia AI NI pravi zate",
+    "notForYouBody": "Če načrtuješ potovanje čez mejo, potrebuješ letalske karte ali hotel v tujini — izberi generalista (Layla, Wanderlog ali klepet s ChatGPT/Gemini). To je v redu; tudi mi njih uporabljamo za tuja potovanja. Radi pa te vidimo na slovenskem delu poti.",
+    "ctaTitle": "Poskusi brez prijave",
     "ctaBody": "Od vprašanja do načrta: 30 sekund. Zahtevan račun: nič. Jezik: slovenščina, angleščina, italijanščina ali nemščina.",
     "ctaPrimary": "Sestavi moj načrt",
     "ctaSecondary": "Razišči destinacije",
     "faqTitle": "Pogosta vprašanja",
     "faq": {
       "q1": "Ali potrebujem račun, da načrtujem potovanje?",
-      "a1": "Ne. Načrt ustvarite, shranite in delite povsem brez prijave — deluje anonimno. Prosti račun je neobvezen in doda le zgodovino potovanj na strani Moja potovanja.",
+      "a1": "Ne. Načrt ustvariš, shraniš in deliš povsem brez prijave — deluje anonimno. Prosti račun je neobvezen in doda le zgodovino potovanj na strani Moja potovanja.",
       "q2": "Koliko stane uporaba?",
-      "a2": "Načrtovalec, itinererji, vodiči in deljenje so brezplačni. Platforma zasluži z rezervacijami lokalnih doživetij in prodajo na tržnici — ne z vašimi podatki.",
+      "a2": "Načrtovalec, itinererji, vodiči in deljenje so brezplačni. Platforma zasluži z rezervacijami lokalnih doživetij in prodajo na tržnici — ne s tvojimi podatki.",
       "q3": "Kaj če potujem izven Slovenije?",
-      "a3": "Iskreno: za čezmejna potovanja uporabite generalista (na primer Layla, Wanderlog, Mindtrip) ali klepet z AI. Mi pokrivamo samo Slovenijo — a jo pokrivamo globoko, s preverjenimi lokalnimi podatki.",
-      "q4": "Kako zanesljivi so vaši podatki?",
+      "a3": "Iskreno: za čezmejna potovanja uporabi generalista (na primer Layla, Wanderlog, Mindtrip) ali klepet z AI. Mi pokrivamo samo Slovenijo — a jo pokrivamo globoko, s preverjenimi lokalnimi podatki.",
+      "q4": "Kako zanesljivi so tvoji podatki?",
       "a4": "Podatke za destinacije urejamo uredniško, cene in odpiralni časi imajo vire, vsak načrt pa gre skozi geo-validacijo z opozorili. Kadar nismo prepričani, piše »preveri pred obiskom«. Metodologija je javna na strani Vir podatkov.",
       "q5": "Do zdaj sem uporabljal(a) Mindtrip — zakaj preklopiti?",
-      "a5": "Mindtrip je bil dober generalist; ob preverbi 28. 9. 2026 je bilo celo njihovo spletno okolje (stran, prijava, API) nedosegljivo, o vzroku pa ne moremo soditi. Za slovenska potovanja pri nas dobite: načrtovanje brez prijave, štiri jezike, preverjene lokalne podatke in rezervacije pri lokalnih ponudnikih. Presodite sami — poskus brez prijave traja 30 sekund.",
+      "a5": "Mindtrip je bil dober generalist; ob preverbi 28. 9. 2026 je bilo celo njihovo spletno okolje (stran, prijava, API) nedosegljivo, o vzroku pa ne moremo soditi. Za slovenska potovanja pri nas dobiš: načrtovanje brez prijave, štiri jezike, preverjene lokalne podatke in rezervacije pri lokalnih ponudnikih. Presodi sam — poskus brez prijave traja 30 sekund.",
       "q6": "Kaj se je zgodilo z Mindtripom?",
-      "a6": "Iskreno: vemo le, kar smo preverili. 28. septembra 2026 je celoten njihov spletni orodnik (mindtrip.ai, prijava, API) prikazoval stran »Under Construction«; o izpadu nismo našli medijske pokritosti, recenzije iz 22.–23. septembra pa jih medtem še uvrščajo med najboljša brezplačna AI orodja za načrtovanje. Ne ugibamo o vzrokih ali prihodnosti — trenutno stanje preverite neposredno pri njih."
+      "a6": "Iskreno: vemo le, kar smo preverili. 28. septembra 2026 je celoten njihov spletni orodnik (mindtrip.ai, prijava, API) prikazoval stran »Under Construction«; o izpadu nismo našli medijske pokritosti, recenzije iz 22.–23. septembra pa jih medtem še uvrščajo med najboljša brezplačna AI orodja za načrtovanje. Ne ugibamo o vzrokih ali prihodnosti — trenutno stanje preveri neposredno pri njih."
     },
     "sources": "Primerjava temelji na javno dostopnih recenzijah (2025–2026) in uredniški analizi platforme (september 2026). Več: <linkSources>vir podatkov</linkSources> · <linkTrust>zaupanje in varnost</linkTrust> · <linkAbout>o strani</linkAbout>",
     "ctaMap": "Odpri zemljevid",
@@ -2411,7 +2415,7 @@
     "fieldIntro": "Iskrena primerjava zahteva datirane preverbe, ne večne trditve. To so točkovne ugotovitve naših preverb (javni dostop do strani, uradni viri) — ko se teren spremeni, posodobimo to sekcijo.",
     "field": {
       "mindtripTitle": "Mindtrip: celoten spletni orodnik nedosegljiv",
-      "mindtripDesc": "Ob preverbi 28. 9. 2026 so mindtrip.ai, prijava in API prikazovali stran »Under Construction« (preusmeritev vodi na njihov CDN za slike). O izpadu nismo zasledili medijske pokritosti, recenzije iz 22.–23. 9. pa Mindtrip še navajajo med najboljšimi orodji — recenzijski cikel zaostaja za realnostjo. O vzroku ne ugibamo; trenutno stanje preverite pri njih.",
+      "mindtripDesc": "Ob preverbi 28. 9. 2026 so mindtrip.ai, prijava in API prikazovali stran »Under Construction« (preusmeritev vodi na njihov CDN za slike). O izpadu nismo zasledili medijske pokritosti, recenzije iz 22.–23. 9. pa Mindtrip še navajajo med najboljšimi orodji — recenzijski cikel zaostaja za realnostjo. O vzroku ne ugibamo; trenutno stanje preveri pri njih.",
       "laylaTitle": "Layla: za marsikaterega obiskovalca za zidom",
       "laylaDesc": "layla.ai je ob naših preverbah vračal napako 429 in varnostno preverjanje brskalnika; nekdanja tržna domena itslayla.com je danes nepovezana modna trgovina. Laylo je 31. 7. 2026 prevzela skupina Expedia — klepet-prvi lijaki v tej kategoriji zdaj stojijo na OTA denarju, kar še ne pomeni boljše izkušnje za vsakega obiskovalca.",
       "googleTitle": "Google: generični AI itinerarji so zdaj brezplačni",

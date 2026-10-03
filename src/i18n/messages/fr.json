@@ -27,7 +27,10 @@
     "accountHeading": "Compte",
     "login": "Connexion",
     "compare": "Comparaison",
-    "sheetSlogan": "L'IA compose votre itinéraire en quelques secondes."
+    "sheetSlogan": "L'IA compose votre itinéraire en quelques secondes.",
+    "languageAria": "Choisir la langue — actuellement {current}",
+    "languageHeading": "Langue",
+    "languageSheetHint": "En changeant de langue, vous restez sur la même page dans la langue choisie."
   },
   "hero": {
     "title": "Que souhaitez-vous vivre en Slovénie ?",
@@ -174,7 +177,8 @@
     "sortRating": "Mieux noté",
     "sortPrice": "Le moins cher",
     "cardPrice": "≈ {price} €",
-    "cardPriceSr": " · prix estimé par personne"
+    "cardPriceSr": " · prix estimé par personne",
+    "guideLink": "Guide"
   },
   "homeExp": {
     "eyebrow": "Expériences",
@@ -1259,7 +1263,7 @@
   },
   "demoScenarios": {
     "badge": "Essayez en 30 secondes",
-    "title": "Que souhaitez-vous vivre ?",
+    "title": "Créez un itinéraire en 30 secondes",
     "subtitle": "Cliquez sur l'une des options et l'IA crée instantanément votre plan",
     "customTitle": "Créez votre propre",
     "customSubtitle": "Ou choisissez une option ci-dessus",

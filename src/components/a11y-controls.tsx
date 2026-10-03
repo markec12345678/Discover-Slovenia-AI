@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { Accessibility, Contrast, BookOpenText } from "lucide-react";
+import { Accessibility, BookOpenText, Contrast } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -62,17 +62,17 @@ function applyPrefs(prefs: A11yPrefs): void {
   for (const cls of a11yClasses(prefs)) root.classList.add(cls);
 }
 
-export function A11yControls({
-  scrolled = false,
-}: {
-  /** Navigacijska lupina: nad herojem bela pisava, po odscrollu temna. */
-  scrolled?: boolean;
-}) {
-  const t = useTranslations("a11y");
-  const [mounted, setMounted] = React.useState(false);
+/**
+ * Stanje + logika obeh stikal (delita jo dropdown v headerju in inline
+ * sekcija v mobilnem Sheetu — POLISH 1.173.0 izvlečena, da ostajata po
+ * definiciji enaki: isti localStorage ključ, isti <html> razredi,
+ * ista bivalentna semantika kontrasta).
+ */
+function useA11ySwitchState() {
   const [prefs, setPrefs] = React.useState<A11yPrefs>(DEFAULT_A11Y_PREFS);
   // OS zahteva po kontrastu (samo za stanje stikala — CSS odloča barve)
   const [osContrast, setOsContrast] = React.useState(false);
+  const [mounted, setMounted] = React.useState(false);
 
   React.useEffect(() => {
     const stored = loadPrefs();
@@ -87,8 +87,6 @@ export function A11yControls({
     setMounted(true);
     return () => mq.removeEventListener("change", onChange);
   }, []);
-
-  const highContrastActive = isHighContrastActive(prefs, osContrast);
 
   /**
    * Preklop kontrasta (bivalentno stikalo glede na DEJANSKO dejavno stanje):
@@ -111,7 +109,86 @@ export function A11yControls({
     applyPrefs(nextPrefs);
   }
 
-  const anyActive = highContrastActive || prefs.reading;
+  return {
+    prefs,
+    mounted,
+    osContrast,
+    highContrastActive: isHighContrastActive(prefs, osContrast),
+    toggleContrast,
+    toggleReading,
+  };
+}
+
+/**
+ * Oba stikala (visok kontrast + bralni način) — vizualni fragment, ki ga
+ * delita dropdown vsebina (header) in inline sekcija (mobilni Sheet).
+ * Samo predstavitev: stanje in preklopi pridejo iz useA11ySwitchState.
+ */
+function A11ySwitchList({
+  state,
+  idPrefix,
+}: {
+  state: ReturnType<typeof useA11ySwitchState>;
+  /** Edinstvena pripona id-jev (header in Sheet sta hkrati montirana). */
+  idPrefix: string;
+}) {
+  const t = useTranslations("a11y");
+  const { prefs, mounted, highContrastActive, toggleContrast, toggleReading } =
+    state;
+  return (
+    <>
+      <label
+        htmlFor={`${idPrefix}-contrast-switch`}
+        className="flex cursor-pointer items-center gap-3 rounded-md px-2 py-2.5 outline-none transition-colors hover:bg-accent focus-visible:bg-accent"
+      >
+        <Contrast className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span className="text-sm font-medium leading-none">{t("contrastLabel")}</span>
+          <span className="mt-1 text-xs leading-snug text-muted-foreground">
+            {t("contrastHint")}
+          </span>
+        </span>
+        <Switch
+          id={`${idPrefix}-contrast-switch`}
+          checked={mounted ? highContrastActive : false}
+          onCheckedChange={toggleContrast}
+          // nedoločeno stanje pred mountom — ne lažmo o dejavnosti
+          aria-label={t("contrastLabel")}
+        />
+      </label>
+      <label
+        htmlFor={`${idPrefix}-reading-switch`}
+        className="flex cursor-pointer items-center gap-3 rounded-md px-2 py-2.5 outline-none transition-colors hover:bg-accent focus-visible:bg-accent"
+      >
+        <BookOpenText className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span className="text-sm font-medium leading-none">{t("readingLabel")}</span>
+          <span className="mt-1 text-xs leading-snug text-muted-foreground">
+            {t("readingHint")}
+          </span>
+        </span>
+        <Switch
+          id={`${idPrefix}-reading-switch`}
+          checked={mounted ? prefs.reading : false}
+          onCheckedChange={toggleReading}
+          aria-label={t("readingLabel")}
+        />
+      </label>
+    </>
+  );
+}
+
+export function A11yControls({
+  scrolled = false,
+}: {
+  /** Navigacijska lupina: nad herojem bela pisava, po odscrollu temna. */
+  scrolled?: boolean;
+}) {
+  const t = useTranslations("a11y");
+  const state = useA11ySwitchState();
+  const { mounted } = state;
+
+  const anyActive = state.highContrastActive || state.prefs.reading;
 
   return (
     <DropdownMenu>
@@ -146,48 +223,42 @@ export function A11yControls({
             {t("menuTitle")}
           </p>
         </div>
-        <label
-          htmlFor="a11y-contrast-switch"
-          className="flex cursor-pointer items-center gap-3 rounded-md px-2 py-2.5 outline-none transition-colors hover:bg-accent focus-visible:bg-accent"
-        >
-          <Contrast className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-          <span className="flex min-w-0 flex-1 flex-col">
-            <span className="text-sm font-medium leading-none">{t("contrastLabel")}</span>
-            <span className="mt-1 text-xs leading-snug text-muted-foreground">
-              {t("contrastHint")}
-            </span>
-          </span>
-          <Switch
-            id="a11y-contrast-switch"
-            checked={mounted ? highContrastActive : false}
-            onCheckedChange={toggleContrast}
-            // nedoločeno stanje pred mountom — ne lažmo o dejavnosti
-            aria-label={t("contrastLabel")}
-          />
-        </label>
-        <label
-          htmlFor="a11y-reading-switch"
-          className="flex cursor-pointer items-center gap-3 rounded-md px-2 py-2.5 outline-none transition-colors hover:bg-accent focus-visible:bg-accent"
-        >
-          <BookOpenText className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-          <span className="flex min-w-0 flex-1 flex-col">
-            <span className="text-sm font-medium leading-none">{t("readingLabel")}</span>
-            <span className="mt-1 text-xs leading-snug text-muted-foreground">
-              {t("readingHint")}
-            </span>
-          </span>
-          <Switch
-            id="a11y-reading-switch"
-            checked={mounted ? prefs.reading : false}
-            onCheckedChange={toggleReading}
-            aria-label={t("readingLabel")}
-          />
-        </label>
+        <A11ySwitchList state={state} idPrefix="a11y" />
         <p className="px-4 pb-2 pt-1 text-[11px] leading-snug text-muted-foreground">
           {t("osNote")}
         </p>
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+/**
+ * A11ySheetSection — INLINE sekcija obeh stikal za MOBILNI Sheet meni
+ * (POLISH 1.173.0).
+ *
+ * ZAKAJ INLINE IN NE DROPDOWN: vgnezden Radix dropdown v Sheetu (Dialog) je
+ * bil v produkciji POKVARJEN — dropdown content portalira na document.body,
+ * kar je IZVEN Sheet vsebine → Sheetov outside-interaction handler je zaprl
+ * Sheet, preden se je dropdown odprl (klik = nič se ne zgodi; enako velja
+ * za LanguageSwitcher). Stikali vsebujemo neposredno v telesu Sheet.
+ *
+ - Ista stanja/logika kot header dropdown (useA11ySwitchState — en vir
+ * resnice): isti localStorage, isti <html> razredi, isti naslovi/namigi.
+ */
+export function A11ySheetSection() {
+  const t = useTranslations("a11y");
+  const state = useA11ySwitchState();
+
+  return (
+    <div className="space-y-1" role="group" aria-label={t("menuTitle")}>
+      <p className="px-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+        {t("menuTitle")}
+      </p>
+      <A11ySwitchList state={state} idPrefix="a11y-sheet" />
+      <p className="px-2 text-[11px] leading-snug text-muted-foreground">
+        {t("osNote")}
+      </p>
+    </div>
   );
 }
 

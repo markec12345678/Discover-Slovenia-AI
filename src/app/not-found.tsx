@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { Compass, Home, Search } from "lucide-react";
 
@@ -12,12 +13,25 @@ import { Compass, Home, Search } from "lucide-react";
 // in načrtuj (PLAN). Dvojezična detekcija po poti (/en prefix) — ISTI vzorec
 // kot pot/[shareId]/error.tsx (klientka detekcija, ker not-found teče izven
 // RSC prevajalske plasti za ne-lokalizirane/nezname poti).
+//
+// POLISH 1.173.0: dokument naslov (zavihek brskalnika) je prej ostal
+// generičen; sedaj se iskreno oglasi "404 — …" v jeziku uporabnika
+// (isti dvojezični kanon kot telo strani).
 // ============================================================================
 
 export default function NotFound() {
   const isEn =
     typeof window !== "undefined" &&
     window.location.pathname.startsWith("/en");
+
+  // POLISH 1.173.0: naslov zavihka — a11y (bralniki napovejo stanje) in
+  // jasnost v zgodovini brskalnika. ("use client" komponenta ne more
+  // izvoziti metadata — klientka nastavitev je kanonična rešitev.)
+  useEffect(() => {
+    document.title = isEn
+      ? "404 — This page is not on the map yet | Discover Slovenia AI"
+      : "404 — Te strani (še) ni na zemljevidu | Discover Slovenia AI";
+  }, [isEn]);
 
   return (
     <main

@@ -18,12 +18,12 @@
     "bestTimeTitle": "Najboljši čas za obisk {name}",
     "bestTimeDesc": "Vodič po sezonah — pomlad, poletje, jesen, zima.",
     "faqTitle": "Pogosta vprašanja",
-    "ctaTitle": "Sestavite popoln {labelLower} v {name}",
-    "ctaP": "AI upošteva vaš proračun, interese in čas. {description}",
+    "ctaTitle": "Sestavi popoln {labelLower} v {name}",
+    "ctaP": "AI upošteva tvoj proračun, interese in čas. {description}",
     "ctaPlanner": "AI načrtovalec potovanj",
     "ctaItineraries": "Pripravljeni itinererji",
     "elsewhereTitle": "{label} tudi drugje",
-    "elsewhereDesc": "Raziščite {labelLower} v drugih slovenskih destinacijah:",
+    "elsewhereDesc": "Razišči {labelLower} v drugih slovenskih destinacijah:",
     "meta": {
       "title": "{title} — Vodnik {labelLower}",
       "ogDescription": "{description} Vodnik za {name}.",
@@ -40,7 +40,7 @@
         "q3": "Kdaj je najboljši čas za romantični obisk {name}?",
         "a3": "Pomlad (april–junij) in zgodnja jesen (september–oktober) ponujata najbolj romantično vzdušje v {name} — prijetne temperature, manj turistov in čudovite barve narave.",
         "q4": "Katere nastanitve v {name} so najbolj romantične?",
-        "a4": "Za romantični pobeg priporočamo boutique hotele in nastanitve z razgledom. Preverite naše sezname lokalov v {name} — vsi imajo ročno izbrane ponudnike."
+        "a4": "Za romantični pobeg priporočamo boutique hotele in nastanitve z razgledom. Preveri naše sezname lokalov v {name} — vsi imajo ročno izbrane ponudnike."
       },
       "druzinski": {
         "q1": "Ali je {name} primeren za obisk z otroki?",
@@ -54,11 +54,11 @@
       },
       "budget": {
         "q1": "Koliko stane obisk {name} z omejenim proračunom?",
-        "a1": "Z omejenim proračunom lahko {name} obiščete za {price}, vključno z nastanitvijo v hostelih ali zasebnih sobah, lokalno hrano na tržnicah in brezplačnimi aktivnostmi.",
+        "a1": "Z omejenim proračunom lahko {name} obiščeš za {price}, vključno z nastanitvijo v hostelih ali zasebnih sobah, lokalno hrano na tržnicah in brezplačnimi aktivnostmi.",
         "q2": "Katere brezplačne aktivnosti so na voljo v {name}?",
         "a2": "{name} ponuja številne brezplačne aktivnosti — sprehode po starem mestu, obisk cerkva, pohodne poti v okolici in javne plaže. Vstopnice za muzeje imajo pogosto popuste za študente.",
         "q3": "Kako prihraniti pri prevozu do {name}?",
-        "a3": "Za ugoden prevoz do {name} priporočamo vlak ali avtobus (iskanje preko FlixBus ali slovenskih železnic). V {name} lahko uporabite javni mestni transport ali kolo (veliko destinacij ima sisteme izposoje).",
+        "a3": "Za ugoden prevoz do {name} priporočamo vlak ali avtobus (iskanje preko FlixBus ali slovenskih železnic). V {name} lahko uporabiš javni mestni transport ali kolo (veliko destinacij ima sisteme izposoje).",
         "q4": "Ali najdem poceni nastanitev v {name}?",
         "a4": "Da — v {name} so na voljo hostli, zasebne sobe preko Airbnb in družinski penzioni. Cene so nižje izven sezone (november–marec, razen praznikov)."
       },
@@ -66,15 +66,15 @@
         "q1": "Kaj početi v {name} med vikendom?",
         "a1": "Vikend v {name} omogoča raziskovanje glavnih znamenitosti, lokalne kulinarike in vsaj ene izkušnje. Petek zvečer je idealen za prihod in sprehod, sobota za glavne atrakcije, nedelja za sprostitev.",
         "q2": "Koliko stane vikend v {name}?",
-        "a2": "Vikend v {name} (2 nočitvi, 3 obroki na dan, atrakcije) stane približno {price}. Prihranite lahko z early-bird rezervacijami in lokalnimi tržnicami.",
+        "a2": "Vikend v {name} (2 nočitvi, 3 obroki na dan, atrakcije) stane približno {price}. Prihraniš lahko z early-bird rezervacijami in lokalnimi tržnicami.",
         "q3": "Kdaj je najboljši čas za vikend pobeg v {name}?",
         "a3": "{name} je odličen za vikend pobeg skozi vse leto. Pomlad in jesen ponujata najboljše vreme za raziskovanje, poleti je več dogodkov, pozimi pa manj turistov in nižje cene.",
         "q4": "Kako priti do {name} za vikend?",
         "a4": "{name} je dostopen z avtomobilom, vlakom ali avtobusom. Priporočamo rezervacijo prevoza vsaj teden dni vnaprej, še posebej za petek popoldan."
       },
       "ai": {
-        "q": "Ali lahko AI sestavi itinerer za {name}?",
-        "a": "Da — naš AI načrtovalec lahko sestavi popolnoma prilagojen itinerer za {name}, ki upošteva vaše interese, proračun in čas. Preizkusite ga na strani Načrtuj."
+        "q": "Ali lahko sestaviš itinerer za {name}?",
+        "a": "Da — načrtovalec lahko sestavi popolnoma prilagojen itinerer za {name}, ki upošteva tvoje interese, proračun in čas. Preizkusi ga na strani Načrtuj."
       }
     },
     "guideTypes": {
@@ -90,15 +90,15 @@
         "metaKeyword": "romantika",
         "h1": {
           "title": "Romantični sprehod ob {hl1}",
-          "description": "Začnite dan z umirjenim sprehodom ob {hl1Lower} v {name}. Jutranja svetloba in manj turistov ustvarjata idealno vzdušje za par."
+          "description": "Začni dan z umirjenim sprehodom ob {hl1Lower} v {name}. Jutranja svetloba in manj turistov ustvarjata idealno vzdušje."
         },
         "h2": {
           "title": "Zasebna izkušnja: {hl2}",
-          "description": "Popoldne si vzemite čas za zasebno izkušnjo v {name} — degustacija, vožnja z ladjico ali lokalna delavnica. Naša priporočila so preverjena za pare."
+          "description": "Popoldne si vzemi čas za zasebno izkušnjo v {name} — degustacija, vožnja z ladjico ali lokalna delavnica. Naša priporočila so preverjena za pare."
         },
         "h3": {
           "title": "Večerja ob svečkah v {name}",
-          "description": "Zaključite dan z romantično večerjo v eni izmed izbranih restavracij v {name}. Lokalni kuharji ponujajo sezonske menije z vino slovenskih vinogradov."
+          "description": "Zaključi dan z romantično večerjo v eni izmed izbranih restavracij v {name}. Lokalni kuharji ponujajo sezonske menije z vino slovenskih vinogradov."
         }
       },
       "druzinski": {
@@ -121,7 +121,7 @@
         },
         "h3": {
           "title": "Družinska večerja v {name}",
-          "description": "Izberite restavracijo z otroškim menijem v {name}. Lokalne pice, testenine in tradicionalne slovenske jedi so priljubljene pri vseh starostih."
+          "description": "Izberi restavracijo z otroškim menijem v {name}. Lokalne pice, testenine in tradicionalne slovenske jedi so priljubljene pri vseh starostih."
         }
       },
       "budget": {
@@ -140,7 +140,7 @@
         },
         "h2": {
           "title": "Piknik ob {hl2}",
-          "description": "Kupite lokalne siri, kruh in sadje na tržnici v {name} in si organizirajte piknik. Prihranek pri obroku omogoča več za izkušnje."
+          "description": "Kupi lokalne siri, kruh in sadje na tržnici v {name} in si organiziraj piknik. Prihranek pri obroku omogoča več za izkušnje."
         },
         "h3": {
           "title": "Pohod do {hl3}",
@@ -159,15 +159,15 @@
         "metaKeyword": "vikend pobeg",
         "h1": {
           "title": "Petek: prihod in sprehod po {name}",
-          "description": "Po prihodu v {name} se namestite in si vzemite čas za sproščen sprehod po starem mestu. Uživajte v lokalni kavi in načrtujte naslednja dva dneva."
+          "description": "Po prihodu v {name} se namesti in si vzemi čas za sproščen sprehod po starem mestu. Uživaj v lokalni kavi in načrtuj naslednja dva dneva."
         },
         "h2": {
           "title": "Sobota: {hl1} in okolica",
-          "description": "Glavni dan namenite glavnim znamenitostim — {hl1Lower}, lokalni muzej in kosilo v tradicionalni restavraciji v {name}."
+          "description": "Glavni dan nameni glavnim znamenitostim — {hl1Lower}, lokalni muzej in kosilo v tradicionalni restavraciji v {name}."
         },
         "h3": {
           "title": "Nedelja: {hl2} in odhod",
-          "description": "Zadnji dan izkoristite za {hl2Lower} in nakup lokalnih spominov. Pred odhodom še ena lokalna kavica v {name}."
+          "description": "Zadnji dan izkoristi za {hl2Lower} in nakup lokalnih spominov. Pred odhodom še ena lokalna kavica v {name}."
         }
       }
     }

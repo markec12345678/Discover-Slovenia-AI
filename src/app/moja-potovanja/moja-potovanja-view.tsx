@@ -137,10 +137,10 @@ const L = {
   toast: {
     linkSent: { sl: "Povezava poslana", en: "Link sent" },
     checkInbox: {
-      sl: "Preverite vaš e-poštni predal (tudi mapo neželena pošta).",
+      sl: "Preveri svoj e-poštni predal (tudi mapo neželena pošta).",
       en: "Check your inbox (including the spam folder).",
     },
-    tryAgain: { sl: "Poskusite znova.", en: "Please try again." },
+    tryAgain: { sl: "Poskusi znova.", en: "Please try again." },
   },
   guest: {
     subtitleA: { sl: "Tvoji shranjeni načrti na", en: "Your saved plans live on" },
@@ -159,17 +159,17 @@ const L = {
     onThisDevice: { sl: "na tej napravi", en: "on this device" },
   },
   user: {
-    greeting: { sl: "Pozdravljeni,", en: "Welcome," },
+    greeting: { sl: "Pozdravljen,", en: "Welcome," },
     signOut: { sl: "Odjavi se", en: "Sign out" },
     account: { sl: "Račun", en: "Account" },
   },
   verify: {
-    title: { sl: "Potrdite svojo e-pošto", en: "Confirm your email" },
+    title: { sl: "Potrdi svojo e-pošto", en: "Confirm your email" },
     textA: {
-      sl: "Potrdite svojo e-pošto, da vidite zgodovino konzultacij — na",
+      sl: "Potrdi svojo e-pošto, da vidiš zgodovino konzultacij — povezavo smo ti poslali na",
       en: "Confirm your email to see your consultation history — we've sent a link to",
     },
-    textB: { sl: " ste prejeli povezavo.", en: "." },
+    textB: { sl: ".", en: "." },
     resend: { sl: "Pošlji povezavo znova", en: "Send the link again" },
   },
   trips: {
@@ -207,11 +207,11 @@ const L = {
       en: "Plan a trip with the AI planner and save it — it shows up here (on this device).",
     },
     emptyTitle: {
-      sl: "Nimate še shranjenih potovanj",
+      sl: "Nimaš še shranjenih potovanj",
       en: "No saved trips yet",
     },
     emptyDesc: {
-      sl: "Načrtujte potovanje z AI načrtovalcem in ga shranite — pojavi se tukaj.",
+      sl: "Načrtuj potovanje z AI načrtovalcem in ga shrani — pojavi se tukaj.",
       en: "Plan a trip with the AI planner and save it — it shows up here.",
     },
   },
@@ -233,15 +233,15 @@ const L = {
       en: (d: string) => `Answered ${d}`,
     },
     answerByEmail: {
-      sl: "Odgovor prispe na vašo e-pošto",
+      sl: "Odgovor prispe na tvojo e-pošto",
       en: "The answer will arrive by email",
     },
     emptyTitle: {
-      sl: "Niste še oddali konzultacije",
+      sl: "Nimaš še oddane konzultacije",
       en: "No consultations yet",
     },
     emptyDesc: {
-      sl: "Poiščite brezplačen nasvet lokalca — vpišite vprašanje in AI ekspert vam bo odgovoril po e-pošti.",
+      sl: "Poišči brezplačen nasvet lokalca — vpiši vprašanje in AI ekspert ti bo odgovoril po e-pošti.",
       en: "Get free local advice — ask a question and the AI expert will answer by email.",
     },
     emptyAction: { sl: "Brezplačna konzultacija", en: "Free consultation" },

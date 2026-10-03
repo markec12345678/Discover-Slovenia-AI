@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Link } from "@/i18n/navigation";
 import { useLocale } from "next-intl";
 import { localePrefix } from "@/i18n/routing";
 import {
@@ -25,6 +26,7 @@ import {
   MapPlus,
   CalendarDays,
   BadgeCheck,
+  BookOpen,
 } from "lucide-react";
 import {
   Dialog,
@@ -659,7 +661,7 @@ export function DestinationModal({
 
                 <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
                   {pick(locale, {
-                    sl: "Affiliate povezave — podpora projektu brez dodatnih stroškov za vas.",
+                    sl: "Affiliate povezave — podpora projektu brez dodatnih stroškov zate.",
                     en: "Affiliate links — supporting the project at no extra cost to you.",
                     it: "Link affiliate — sostengono il progetto senza costi extra per te.",
                     de: "Affiliate-Links — sie unterstützen das Projekt ohne Mehrkosten für dich.",
@@ -668,6 +670,32 @@ export function DestinationModal({
                   })}
                 </p>
               </section>
+
+              {/* POLISH 1.173.0: CELOTEN VODNIK — povezava na hub stran
+                  destinacije (/destinacija/[slug]; obstaja od TASK 70+
+                  z guide/itinerary/things-to-do/best-time podstranmi),
+                  a je bila iz raziskovalne poti (katalog → modal) NEOBSTOJEČA
+                  (modal vodi samo k partnerjem). Poveže človeško pot IN
+                  notranje povezovanje (katalog → 38 hub strani). */}
+              <Link
+                href={`/destinacija/${encodeURIComponent(destination.slug)}`}
+                onClick={() => {
+                  trackFunnel("listing_click", `/destinacija/${destination.slug}`);
+                  onClose();
+                }}
+                className="flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-primary/40 bg-primary/5 px-4 py-3 text-sm font-semibold text-primary transition-colors hover:bg-primary/10"
+              >
+                <BookOpen className="size-4" aria-hidden="true" />
+                {pick(locale, {
+                  sl: `Odpri celoten vodnik: ${destination.name}`,
+                  en: `Open the full guide: ${destination.name}`,
+                  it: `Apri la guida completa: ${destination.name}`,
+                  de: `Den ganzen Guide öffnen: ${destination.name}`,
+                  fr: `Ouvrir le guide complet : ${destination.name}`,
+                  es: `Abrir la guía completa: ${destination.name}`,
+                })}
+                <ArrowRight className="size-4" aria-hidden="true" />
+              </Link>
 
               {/* ISSUE #4 §18 (VAL 7): PROVENANCE NOGA — vir vsebine +
                   "posodobljeno" (uradna stran ↔ uredniška kuracija).

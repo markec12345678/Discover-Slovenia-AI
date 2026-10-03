@@ -58,7 +58,7 @@ const L = {
       `${n} destinos de los Alpes a Albania en un solo mapa — con gasolineras, restaurantes, alojamientos y otros lugares locales, detalles de cada posición y la ruta de tu itinerario IA.`,
   },
   hint: {
-    sl: "Kliknite marker za podrobnosti · Brez prijave",
+    sl: "Klikni marker za podrobnosti · Brez prijave",
     en: "Tap a marker for details · No sign-up required",
     it: "Tocca un marker per i dettagli · Senza registrazione",
     de: "Tippe auf einen Marker für Details · Ohne Registrierung",
@@ -74,7 +74,7 @@ const L = {
     es: "Mapa interactivo de Eslovenia y los Balcanes",
   },
   metaDescription: {
-    sl: "Raziščite Slovenijo in Balkan na interaktivnem zemljevidu — destinacije, bencinske postaje, restavracije, nastanitve, lokalne ponudnike in pot svojega AI itinererja.",
+    sl: "Razišči Slovenijo in Balkan na interaktivnem zemljevidu — destinacije, bencinske postaje, restavracije, nastanitve, lokalne ponudnike in pot svojega AI itinererja.",
     en: "Explore Slovenia and the Balkans on an interactive map — destinations, petrol stations, restaurants, stays, local providers and your AI itinerary route.",
     it: "Esplora Slovenia e Balcani su una mappa interattiva — destinazioni, stazioni di benzina, ristoranti, alloggi, fornitori locali e il percorso del tuo itinerario AI.",
     de: "Entdecke Slowenien und den Balkan auf einer interaktiven Karte — Reiseziele, Tankstellen, Restaurants, Unterkünfte, lokale Anbieter und die Route deiner KI-Reiseroute.",

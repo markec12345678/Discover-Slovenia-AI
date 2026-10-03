@@ -27,7 +27,10 @@
     "accountHeading": "Konto",
     "login": "Anmelden",
     "compare": "Vergleich",
-    "sheetSlogan": "Die KI erstellt deinen Reiseplan in Sekunden."
+    "sheetSlogan": "Die KI erstellt deinen Reiseplan in Sekunden.",
+    "languageAria": "Sprache wählen — aktuell {current}",
+    "languageHeading": "Sprache",
+    "languageSheetHint": "Beim Wechsel bleibst du auf derselben Seite in der gewählten Sprache."
   },
   "hero": {
     "title": "Was möchtest du in Slowenien erleben?",
@@ -174,7 +177,8 @@
     "sortRating": "Am besten bewertet",
     "sortPrice": "Günstigste",
     "cardPrice": "≈ {price} €",
-    "cardPriceSr": " · Preis pro Person (Schätzung)"
+    "cardPriceSr": " · Preis pro Person (Schätzung)",
+    "guideLink": "Guide"
   },
   "homeExp": {
     "eyebrow": "Erlebnisse",
@@ -1259,7 +1263,7 @@
   },
   "demoScenarios": {
     "badge": "In 30 Sekunden testen",
-    "title": "Was möchtest du erleben?",
+    "title": "Plane in 30 Sekunden",
     "subtitle": "Klicke eine Option an und die KI stellt deinen Plan sofort zusammen",
     "customTitle": "Schreib dein eigenes",
     "customSubtitle": "Oder scrolle nach oben",

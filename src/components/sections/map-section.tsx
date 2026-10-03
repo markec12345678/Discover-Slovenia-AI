@@ -46,7 +46,7 @@ const L = {
   },
   // 1.95.1: regija (Slovenija + zahodni Balkan) + statični FSQ točke
   title: {
-    sl: "Odkrijte Slovenijo in Balkan na zemljevidu",
+    sl: "Odkrij Slovenijo in Balkan na zemljevidu",
     en: "Discover Slovenia & the Balkans on the map",
     it: "Scopri Slovenia e Balcani sulla mappa",
     de: "Entdecke Slowenien und den Balkan auf der Karte",
@@ -55,7 +55,7 @@ const L = {
   },
   subtitle: {
     sl: (n: number) =>
-      `${n} destinacij od Alp do Albanije — plus bencinske postaje, restavracije, nastanitve in druge lokalne točke. Kliknite marker za podrobnosti, vreme in rezervacije.`,
+      `${n} destinacij od Alp do Albanije — plus bencinske postaje, restavracije, nastanitve in druge lokalne točke. Klikni marker za podrobnosti, vreme in rezervacije.`,
     en: (n: number) =>
       `${n} destinations from the Alps to Albania — plus petrol stations, restaurants, stays and other local places. Tap a marker for details, weather and bookings.`,
     it: (n: number) =>
@@ -108,7 +108,7 @@ const L = {
     es: "valoración media",
   },
   legendClick: {
-    sl: "Kliknite marker za podrobnosti",
+    sl: "Klikni marker za podrobnosti",
     en: "Tap a marker for details",
     it: "Tocca un marker per i dettagli",
     de: "Tippe auf einen Marker für Details",

@@ -203,17 +203,25 @@ describe("ISSUE #16 faza 1: Navigation — tab bar + pregrupiran Sheet + Več dr
     // Za ponudnike + CTA Načrtuj sta v Sheetu dobesedno
     expect(sheet).toContain('href="/za-ponudnike"');
     expect(sheet).toContain('href="/nacrtuj"');
-    // Vsebina Sheeta: naslov + jezikovni preklopnik + tema (isti kot prej)
+    // Vsebina Sheeta: naslov + jezik + dostopnost INLINE + tema
+    // POLISH 1.173.0: <LanguageSwitcher /> (vgnezden dropdown) v Sheetu
+    // zamenjan z <LanguageSheetRow /> — klik na prejšnji gumb je zaprl
+    // Sheet, dropdown pa se ni odprl (portal izven Sheet vsebine);
+    // A11ySheetSection iz istega razloga
     expect(sheet).toContain("Discover Slovenia AI");
-    expect(sheet).toContain("<LanguageSwitcher />");
+    expect(sheet).toContain("<LanguageSheetRow />");
+    expect(sheet).toContain("<A11ySheetSection />");
     // naslovi skupin prek i18n (prej hardkodiran SL niz "Razišči več")
     expect(sheet).toContain('t("moreHeading")');
     expect(sheet).toContain('t("toolsHeading")');
     expect(sheet).toContain('t("accountHeading")');
     expect(sheet).toContain("SheetClose");
-    // slogan CTA prek i18n (prej hardkodiran SL niz)
+    // slogan CTA prek i18n (prej hardkodiran SL niz) — POLISH 1.173.0:
+    // slovarski niz je zdaj tikanje, varovalo pa preverja OBE obliki
+    // (stara vikanjska NE sme biti hardkodirana v komponenti)
     expect(sheet).toContain('t("sheetSlogan")');
     expect(sheet).not.toContain("AI vam sestavi itinerer v sekundah.");
+    expect(sheet).not.toContain("AI ti sestavi itinerer v sekundah.");
   });
 
   test("desktop navigacija #16: Odkrij · Moja pot · Zemljevid · Pojdi + Več dropdown (progressive disclosure)", () => {

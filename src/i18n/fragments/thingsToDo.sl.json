@@ -16,15 +16,15 @@
       "zima": "Zima"
     },
     "faqTitle": "Pogosta vprašanja",
-    "planTitle": "Načrtujte potovanje v {name}",
-    "planText": "Naš AI vam lahko sestavi popoln itinerer za {name} in okolico — prilagojen vašemu proračunu, interesom in sezoni.",
+    "planTitle": "Načrtuj potovanje v {name}",
+    "planText": "Sestavimo ti popoln itinerer za {name} in okolico — prilagojen tvojemu proračunu, interesom in sezoni.",
     "planButton": "AI načrtovalec potovanj",
-    "exploreTitle": "Raziščite tudi",
+    "exploreTitle": "Razišči tudi",
     "trackerTitle": "Kaj početi v {name} — Vodnik",
     "meta": {
       "notFound": "Destinacija ni najdena",
       "title": "Kaj početi v {name} — Vodnik {name}",
-      "description": "Odkrijte najboljše aktivnosti, atrakcije in izkušnje v {name}, {tagline}. Vodnik z {count} glavnimi znamenitosti, lokalnimi ponudniki in AI-priporočili.",
+      "description": "Odkrij najboljše aktivnosti, atrakcije in izkušnje v {name}, {tagline}. Vodnik z {count} glavnimi znamenitosti, lokalnimi ponudniki in AI-priporočili.",
       "ogTitle": "Kaj početi v {name} — Discover Slovenia AI",
       "ogDescription": "{count} znamenitosti, lokalne restavracije, aktivnosti in izkušnje v {name}."
     }

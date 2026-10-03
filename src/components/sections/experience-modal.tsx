@@ -231,7 +231,7 @@ const L = {
     },
     errors: {
       dateRequired: {
-        sl: "Izberite datum rezervacije.",
+        sl: "Izberi datum rezervacije.",
         en: "Choose a booking date.",
       },
       dateInvalid: {

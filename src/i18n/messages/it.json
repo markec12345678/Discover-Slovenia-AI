@@ -27,7 +27,10 @@
     "accountHeading": "Account",
     "login": "Accedi",
     "compare": "Confronto",
-    "sheetSlogan": "L'IA compone il tuo itinerario in pochi secondi."
+    "sheetSlogan": "L'IA compone il tuo itinerario in pochi secondi.",
+    "languageAria": "Scegli la lingua — attualmente {current}",
+    "languageHeading": "Lingua",
+    "languageSheetHint": "Cambiando lingua resti sulla stessa pagina nella lingua scelta."
   },
   "hero": {
     "title": "Cosa vuoi vivere in Slovenia?",
@@ -174,7 +177,8 @@
     "sortRating": "Più valutate",
     "sortPrice": "Più economiche",
     "cardPrice": "≈ {price} €",
-    "cardPriceSr": " · stima del prezzo a persona"
+    "cardPriceSr": " · stima del prezzo a persona",
+    "guideLink": "Guida"
   },
   "homeExp": {
     "eyebrow": "Esperienze",
@@ -1259,7 +1263,7 @@
   },
   "demoScenarios": {
     "badge": "Prova in 30 secondi",
-    "title": "Cosa vuoi vivere?",
+    "title": "Crea un itinerario in 30 secondi",
     "subtitle": "Clicca una delle opzioni e l'IA compone subito il tuo piano",
     "customTitle": "Scrivi il tuo",
     "customSubtitle": "Oppure scorri sopra",

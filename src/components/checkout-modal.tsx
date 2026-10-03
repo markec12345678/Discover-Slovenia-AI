@@ -137,7 +137,7 @@ const L = {
     countryRequired: { sl: "Država je obvezna", en: "Country is required" },
     emptyCart: { sl: "Košarica je prazna.", en: "Your cart is empty." },
     payFailed: {
-      sl: "Plačilo ni uspelo. Poskusite znova.",
+      sl: "Plačilo ni uspelo. Poskusi znova.",
       en: "Payment failed. Please try again.",
     },
     unknown: {
@@ -168,7 +168,7 @@ const L = {
   },
   step2: {
     errorTitle: { sl: "Plačilo ni uspelo", en: "Payment failed" },
-    errorFallback: { sl: "Poskusite znova.", en: "Please try again." },
+    errorFallback: { sl: "Poskusi znova.", en: "Please try again." },
     addressTitle: { sl: "Naslov za dostavo", en: "Delivery address" },
     edit: { sl: "Uredi", en: "Edit" },
     itemsTitle: {

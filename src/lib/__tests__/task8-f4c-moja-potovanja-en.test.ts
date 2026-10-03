@@ -227,6 +227,9 @@ describe("F4-C L-pariteta: moja-potovanja/page.tsx (meta nizi)", () => {
 // 2. BREZ HARDCODE SL markerjev v renderu (izven slovarja, brez komentarjev)
 // ---------------------------------------------------------------------------
 describe("F4-C brez hardcoded SL: moja-potovanja-view render", () => {
+  // POLISH 1.173.0: vikanjske oblike zamenjane s tikanjem (Pozdravljeni→
+  // Pozdravljen, Nimate/Niste→Nimaš, Poskusite→Poskusi) — seznam sledi
+  // trenutnemu slovarju; namen ostaja: SL živi SAMO v slovarju, ne v renderu.
   const MARKERS = [
     "Moja potovanja",
     "Shranjena potovanja",
@@ -234,16 +237,15 @@ describe("F4-C brez hardcoded SL: moja-potovanja-view render", () => {
     "Prijavi se",
     "Ustvari račun",
     "Odjavi se",
-    "Pozdravljeni",
+    "Pozdravljen",
     "Račun",
-    "Potrdite svojo e-pošto",
-    "ste prejeli povezavo",
+    "Potrdi svojo e-pošto",
+    "povezavo smo ti poslali",
     "Pošlji povezavo znova",
     "Načrti so shranjeni",
     "na tej napravi",
     "Nimaš še shranjenih",
-    "Nimate še shranjenih",
-    "Niste še oddali",
+    "Nimaš še oddane",
     "Moje AI konzultacije",
     "Odgovor prispe",
     "V pripravi",
@@ -251,7 +253,7 @@ describe("F4-C brez hardcoded SL: moja-potovanja-view render", () => {
     "Načrtuj potovanje",
     "Brezplačna konzultacija",
     "Povezava poslana",
-    "Poskusite znova",
+    "Poskusi znova",
     "Nalaganje ni uspelo",
     "Pošiljanje ni uspelo",
     "Shranjeno",
@@ -274,7 +276,7 @@ describe("F4-C brez hardcoded SL: moja-potovanja-view render", () => {
       "Načrtuj potovanje",
       "Brezplačna konzultacija",
       "Moje AI konzultacije",
-      "Potrdite svojo e-pošto",
+      "Potrdi svojo e-pošto",
     ]) {
       expect(dict.includes(marker)).toBe(true);
     }

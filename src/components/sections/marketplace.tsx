@@ -142,11 +142,11 @@ const L = {
       en: "Error fetching experiences",
     },
     products: {
-      sl: "Ne morem naložiti izdelkov. Poskusite kasneje.",
+      sl: "Ne morem naložiti izdelkov. Poskusi kasneje.",
       en: "Couldn't load products. Please try again later.",
     },
     experiences: {
-      sl: "Ne morem naložiti izkušenj. Poskusite kasneje.",
+      sl: "Ne morem naložiti izkušenj. Poskusi kasneje.",
       en: "Couldn't load experiences. Please try again later.",
     },
   },
@@ -168,7 +168,7 @@ const L = {
       en: "No live offers yet (NO_LIVE_DATA).",
     },
     filtersHint: {
-      sl: "Poskusite spremeniti filtre ali jih počistiti.",
+      sl: "Poskusi spremeniti filtre ali jih počisti.",
       en: "Try changing the filters or clearing them.",
     },
     noLiveProducts: {

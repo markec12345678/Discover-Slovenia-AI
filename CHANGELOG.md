@@ -7,6 +7,72 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.173.0] — 2026-10-03 (POLIRNI KROG: QA obhod žive aplikacije — 2 produksijska hrošča + ton SL + notranje povezovanje)
+
+### Dodano
+
+- **Mobilni Sheet: INLINE vrstica jezikov + INLINE dostopnostne nastavitve**
+  (`LanguageSheetRow` + `A11ySheetSection`). QA obhod žive aplikacije je
+  odkril POKVARJENA vgnezdena Radix dropdowna v mobilnem meniju (Več): klik
+  na jezikovni preklopnik oz. dostopnostne nastavitve je ZAPRL Sheet —
+  dropdown se ni odprl (njegova vsebina portalira na `document.body`,
+  IZVEN Sheet vsebine → Sheetov outside-interaction handler zapre Sheet
+  prej). Uporabnik na mobilnem NI MOGEL preklopiti jezika oz. vklopiti
+  visokega kontrasta/bralnega načina! Novi inline sekciji živita v telesu
+  Sheet: en klik namesto dveh, vsi jeziki vidni naenkrat, tipke ≥44 px,
+  ista jedrna logika kot namizni dropdown (`useLanguageOptions` /
+  `useA11ySwitchState` — en vir resnice). Namizni header ostaja nespremenjen
+  (dropdown tam deluje).
+- **Katalog → destinacijske strani: 38 hub strani je bilo nedosegljivih.**
+  QA je odkril, da `/destinacija/[slug]` strani (z guide/itinerary/
+  things-to-do/best-time podstranmi) obstajajo, a jih IZ KATALOGA ni bilo
+  mogoče odpreti — kartice so odpirale SAMO modal, ta pa je vezal samo na
+  affiliate partnerje (0 internih povezav; sitemap sicer pokriva, a
+  človeška pot je bila prekinjena). Zdaj: kartica ima drugo, kompaktno
+  povezavo „Vodnik →" (pravi `<Link>` iz `@/i18n/navigation` → tudi
+  notranje povezovanje za iskalnike) + modal zaključi z vidno povezavo
+  „Odpri celoten vodnik: {name}" (vseh 6 jezikov).
+- **Jezikovni aria lokaliziran** (`nav.languageAria` ×6): naslovnina
+  „Izberi jezik — trenutno {current}" je bila prej VEDNO slovenska, tudi
+  na /en. Zdaj vsak jezik govori svoj jezik (+ `languageHeading` in
+  `languageSheetHint` za novo Sheet vrstico).
+- **404 naslov zavihka**: `not-found.tsx` je pustil generični `document.title`;
+  zdaj se iskreno oglasi „404 — Te strani (še) ni na zemljevidu | …"
+  (dvojezično — isti detekcijski kanon kot telo strani).
+
+### Popravljeno
+
+- **SL ton poenoten v tikanje** (~100 nizov). Slovar je mešal vikanje
+  („Vaš 3-dnevni itinerer", „Vprašajte me", „Poskusite znova" …) s
+  prevladujočim tikanjem (hero, kviz, vodena pot). Prevodi DE/IT/ES so vsi
+  INFORMALNI (du/tu) — SL je bil izjema, FR ostaja formalen (francoska
+  servisna norma — namerna odločitev, dokumentirana). Popravljeno:
+  `messages/sl.json` (95+3 nizov) + trdo kodirani nizi v 11 komponentah
+  (chatbot, planner, tržnica, zemljevid, moja potovanja, prijava, PWA
+  namestitvena navodila …) + 61 sinhroniziranih fragmentov (prihodnje
+  spajanje ne povrne starega tona). **Namerno izvzeto** (formalni register
+  ostaja): `privacy.*`/`terms.*` (pravna dokumenta) in B2B površine
+  (join-us, pitch-deck, za-ponudnike, owner portal — poslovni naslovnik).
+- **`demoScenarios.title` podvojen hero h1** — „Kaj želiš doživeti?" se je
+  pojavil kot h1 heroja IN h2 spodnje CTA sekcije; preimenovano v
+  „Sestavi načrt v 30 sekundah" (×6 jezikov; badge ostaja enak).
+
+### Testi
+
+- NOVO `polish-1-173-0-round.test.ts` (**22 testov**): Sheet inline
+  (source contract: vrstici v Sheetu, dropdowna samo v headerju, deljeno
+  jedro, ≥44 px, aria-current) + **TRAJNA VAROVALKA TONA** (Unicode-zaveden
+  detektor vikanja nad B2C slovarjem — 0 izven privacy/terms; lažni
+  pozitivi pridevnikov izključeni; fragmenti usklajeni z messages) +
+  vzorčne točke tikanja po komponentah + 404 naslov + naslov demoScenarios
+  ≠ hero + povezave katalog→destinacija + guideLink/languageAria ×6.
+- Usklajeni obstoječi pogodbeni testi (task8-f4b, task8-f4c MARKERS, W5
+  a11y ×2, task8-e Sheet) — naslavljajo novo kanonsko stanje.
+- Regresija: **5.044 pass** (+22), lint 0, tsc 0; 1 znana sandbox DB
+  odvisnost (issue7-g11 ④ — CI s Postgresom zelen).
+
+---
+
 ## [1.172.2] — 2026-10-03 (#24 Sklop 9 regresija: 4+ postankov v shemi dneva NE razširijo strani)
 
 ### Popravljeno

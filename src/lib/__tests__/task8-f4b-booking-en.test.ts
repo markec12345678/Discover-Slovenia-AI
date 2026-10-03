@@ -403,7 +403,9 @@ describe("F4-B booking-panel: dvojezičen prek next-intl (planner.booking)", () 
     expect(enBooking.handoffTransferNote).toContain("from-prices");
     expect(slBooking.heading).toContain("Rezerviraj");
     expect(enBooking.heading).toContain("Book");
-    expect(slBooking.hotelsEmpty).toContain("Rezervirajte");
+    // POLISH 1.173.0: SL ton je zdaj tikanje (usklajeno z DE/IT/ES
+    // glasom znamke) — "Rezerviraj" (2. os. ednine) namesto "Rezervirajte"
+    expect(slBooking.hotelsEmpty).toContain("Rezerviraj");
     expect(enBooking.hotelsEmpty).toContain("Book");
     // iskrene affiliate opombe: NI živih cen v aplikaciji — v obeh jezikih
     expect(slBooking.handoffFlightNote).toContain("brez živih cen");

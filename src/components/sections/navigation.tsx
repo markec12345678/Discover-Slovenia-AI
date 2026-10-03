@@ -25,11 +25,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MobileTabBar } from "@/components/mobile-tab-bar";
 import { MyTripAccountSync } from "@/components/my-trip-account-sync";
-import { LanguageSwitcher } from "@/components/language-switcher";
+import { LanguageSwitcher, LanguageSheetRow } from "@/components/language-switcher";
 import { PwaHeaderIcons } from "@/components/pwa/pwa-header-icons";
 import { SmartSearch } from "@/components/smart-search";
 import { WishlistSheet } from "@/components/wishlist-sheet";
-import { A11yControls } from "@/components/a11y-controls";
+import { A11yControls, A11ySheetSection } from "@/components/a11y-controls";
 import { useCart } from "@/lib/cart-store";
 import { destinationHref } from "@/lib/search-result-nav";
 import { trackPlannerEvent } from "@/lib/planner-analytics";
@@ -599,29 +599,34 @@ export function Navigation({ solid = false }: { solid?: boolean }) {
                   </SheetClose>
                 </nav>
 
-                <div className="mt-4 flex items-center justify-between gap-3 px-4">
-                  <LanguageSwitcher />
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={toggleTheme}
-                      aria-label={NAV_L.theme(lang)}
-                      className="gap-2"
-                    >
-                      {mounted && resolvedTheme === "dark" ? (
-                        <Sun className="size-4" aria-hidden="true" />
-                      ) : (
-                        <Moon className="size-4" aria-hidden="true" />
-                      )}
-                      {mounted && resolvedTheme === "dark"
-                        ? NAV_L.themeLight(lang)
-                        : NAV_L.themeDark(lang)}
-                    </Button>
-                    {/* W5: dostopnost tudi v mobilnem meniju — svetla lupina
-                        (Sheet je na svetlem ozadju) */}
-                    <A11yControls scrolled />
-                  </div>
+                {/* POLISH 1.173.0: jezik in dostopnost INLINE v telesu Sheet
+                    (prej vgnezdena Radix dropdowna — njuna vsebina portalira
+                    na document.body, IZVEN Sheet vsebine → Sheetov
+                    outside-interaction handler je zaprl Sheet, preden se je
+                    dropdown odprl; klik na gumb je torej naredil NIČ.
+                    Namizni header dropdowna ostajata nespremenjena.) */}
+                <div className="mt-4 space-y-4 border-t border-border pt-4">
+                  <LanguageSheetRow />
+                  <A11ySheetSection />
+                  {/* W5: preklop teme v mobilnem meniju — svetla lupina
+                      (Sheet je na svetlem ozadju); navadni gumb, brez
+                      portala — edini od "trojčka" je deloval že prej */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={toggleTheme}
+                    aria-label={NAV_L.theme(lang)}
+                    className="w-full justify-center gap-2"
+                  >
+                    {mounted && resolvedTheme === "dark" ? (
+                      <Sun className="size-4" aria-hidden="true" />
+                    ) : (
+                      <Moon className="size-4" aria-hidden="true" />
+                    )}
+                    {mounted && resolvedTheme === "dark"
+                      ? NAV_L.themeLight(lang)
+                      : NAV_L.themeDark(lang)}
+                  </Button>
                 </div>
 
                 <div className="mt-auto px-4 pb-6">

@@ -2,7 +2,7 @@
   "trustSafety": {
     "hero": {
       "title": "Zaupanje in varnost",
-      "subtitle": "Kako preverjamo partnerje, kako deluje AI ranking in kako varujemo vaše podatke."
+      "subtitle": "Kako preverjamo partnerje, kako deluje AI ranking in kako varujemo tvoje podatke."
     },
     "partner": {
       "title": "Kako preverjamo partnerje",
@@ -82,7 +82,7 @@
     },
     "meta": {
       "title": "Zaupanje in varnost",
-      "description": "Kako preverjamo partnerje, kako deluje AI ranking in kako varujemo vaše podatke."
+      "description": "Kako preverjamo partnerje, kako deluje AI ranking in kako varujemo tvoje podatke."
     }
   }
 }

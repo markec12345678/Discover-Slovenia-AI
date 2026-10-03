@@ -172,10 +172,17 @@ describe("W5: globals.css — visok kontrast + bralni način (source contract)",
 describe("W5: A11yControls + Navigation — UI vstopne točke (source contract)", () => {
   test("kontrola ima DVA stikala (kontrast + branje) z Switch komponento shadcn", () => {
     expect(CONTROLS_SRC).toContain("<Switch");
-    expect(CONTROLS_SRC).toContain('id="a11y-contrast-switch"');
-    expect(CONTROLS_SRC).toContain('id="a11y-reading-switch"');
+    // POLISH 1.173.0: stikali sta izvlečeni v skupni A11ySwitchList (idPrefix
+    // parameter — header "a11y" + mobilni Sheet "a11y-sheet", oba hkrati
+    // montirana) — natančna id-ja so zdaj predloge
+    expect(CONTROLS_SRC).toContain("`${idPrefix}-contrast-switch`");
+    expect(CONTROLS_SRC).toContain("`${idPrefix}-reading-switch`");
     expect(CONTROLS_SRC).toContain("toggleContrast");
     expect(CONTROLS_SRC).toContain("toggleReading");
+    // deljena stanja/logika: header dropdown in Sheet sekcija uporabljata
+    // ISTI vir (useA11ySwitchState) — po definiciji enako vedenje
+    expect(CONTROLS_SRC).toContain("useA11ySwitchState()");
+    expect(CONTROLS_SRC).toContain("function A11ySheetSection");
   });
 
   test("ena pot za stanje: applyPrefs piše localStorage IN razrede na <html> (ne dvojnika)", () => {
@@ -200,8 +207,12 @@ describe("W5: A11yControls + Navigation — UI vstopne točke (source contract)"
   });
 
   test("Navigation izrisuje A11yControls ob preklopu teme: desktop + mobilni meni", () => {
+    // desktop header ostaja dropdown (namizni dropdown deluje)
     expect(NAV_SRC).toContain('<A11yControls scrolled={glass} />');
-    expect(NAV_SRC).toContain("<A11yControls scrolled />");
+    // POLISH 1.173.0: mobilni Sheet je prejel INLINE sekcijo (vgnezden
+    // dropdown v Sheetu je bil pokvarjen — portal izven Sheet vsebine je
+    // zaprl Sheet, preden se je meni odprl)
+    expect(NAV_SRC).toContain("<A11ySheetSection />");
     // obstoječi preklop teme ostaja (sosed, ne nadomestilo)
     expect(NAV_SRC).toContain("toggleTheme");
   });

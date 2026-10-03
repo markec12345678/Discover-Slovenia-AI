@@ -520,7 +520,7 @@ function RegisterForm({ router, toast, switchToLogin }: RegisterFormProps) {
 
       toast({
         title: "Dobrodošli!",
-        description: "Vaš račun je ustvarjen. Potrdite še svojo e-pošto.",
+        description: "Tvoj račun je ustvarjen. Potrdi še svojo e-pošto.",
       });
       // P2-3: prevzem anonimno shranjenih potovanj (neblokirajoče)
       const claimed = await claimSavedTrips();

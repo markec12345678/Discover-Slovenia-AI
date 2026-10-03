@@ -1,13 +1,13 @@
 {
   "affiliateCta": {
     "sectionAria": "Rezervacija za {destination}",
-    "title": "Rezervirajte svoj obisk {destination}",
-    "subtitle": "Povežemo vas z preverjenimi partnerji — rezervirate direktno pri njih, brez posrednikov in brez dodatnih stroškov.",
-    "disclosure": "Partnerske povezave: Booking.com, DiscoverCars, GetYourGuide. Če prek njih opravite rezervacijo, lahko prejmemo provizijo — cena za vas se ne poveča.",
+    "title": "Rezerviraj svoj obisk {destination}",
+    "subtitle": "Povežemo te s preverjenimi partnerji — rezerviraš direktno pri njih, brez posrednikov in brez dodatnih stroškov.",
+    "disclosure": "Partnerske povezave: Booking.com, DiscoverCars, GetYourGuide. Če prek njih opraviš rezervacijo, lahko prejmemo provizijo — cena zate se ne poveča.",
     "hotels": {
       "label": "Nastanitev",
       "title": "Hoteli in apartmaji",
-      "desc": "Poiščite hotele in apartmaje v {destination}.",
+      "desc": "Poišči hotele in apartmaje v {destination}.",
       "cta": "Poišči nastanitev",
       "aria": "Poišči nastanitev v {destination} — odpre Booking.com (partnerska povezava)"
     },

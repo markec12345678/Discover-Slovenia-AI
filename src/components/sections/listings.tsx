@@ -88,7 +88,7 @@ const L = {
   venueFew: { sl: "lokale", en: "venues" },
   venueMany: { sl: "lokalov", en: "venues" },
   error: {
-    sl: "Ne morem naložiti lokalov. Poskusite kasneje.",
+    sl: "Ne morem naložiti lokalov. Poskusi kasneje.",
     en: "Cannot load venues. Please try again later.",
   },
   emptyTitle: {
@@ -96,7 +96,7 @@ const L = {
     en: "No venues match your filters.",
   },
   emptyDescription: {
-    sl: "Poskusite spremeniti filtre ali jih počistiti.",
+    sl: "Poskusi spremeniti filtre ali jih počisti.",
     en: "Try changing or clearing the filters.",
   },
   footerNote: {
