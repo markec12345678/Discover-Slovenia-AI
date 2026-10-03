@@ -73,6 +73,28 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.173.3] — 2026-10-03 (POLIRNI KROG: 404 naslov — MutationObserver, dokončno)
+
+### Popravljeno
+
+- **404 naslov zavihka — 4. (dokončna) iteracija.** QA na 1.173.2 je
+  pokazala, da je tudi enkratno čiščenje `<title>` elementov pozni
+  metapodatkovni flush Nexta prepisal nazaj (ustvari novega). Dokončna
+  rešitev: čiščenje + **MutationObserver** na `<head>`, ki naslov vzdržuje,
+  DOKLER je 404 komponenta montirana — vsak poseg tujca (metadata plast)
+  takoj povrne pravo stanje; idempotentno (če je naslov nedotaknjen,
+  opazovalec ne naredi ničesar → ni zanke). Ob odhodu s 404 opazovalec
+  odklopi in naslov odstrani (naslednja ruta prinese svojega). To je
+  standardni vzorec za klientko komponento, ki po specifikaciji Next.js
+  ne more izvoziti metadata (not-found.tsx).
+
+### Testi
+
+- 404 test posodobljen (observer + disconnect/remove varovalki).
+  Regresija: **5.045 pass**, lint 0, tsc 0.
+
+---
+
 ## [1.173.2] — 2026-10-03 (POLIRNI KROG: 404 naslov — zmagovalna strategija po 2 QA krogih)
 
 ### Popravljeno

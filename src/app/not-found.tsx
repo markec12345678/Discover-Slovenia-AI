@@ -36,16 +36,40 @@ export default function NotFound() {
 
   useEffect(() => {
     const wanted = isEn ? TITLE_EN : TITLE_SL;
-    // Počisti VSE naslove (layout metadata + morebitni dvignjeni) —
-    // brskalnik upošteva prvega, morebitni konkurent pomeni neveljaven tab.
-    document.querySelectorAll("title").forEach((t) => t.remove());
-    const title = document.createElement("title");
-    title.textContent = wanted;
-    document.head.appendChild(title);
+    // Referenca na NASLOV, ki ga ta komponenta drži (za cleanup).
+    let mine: HTMLTitleElement | null = null;
+
+    // Uveljavi 404 naslov kot EDINI <title> v <head>.
+    const ensure = () => {
+      document.querySelectorAll("title").forEach((t) => t.remove());
+      mine = document.createElement("title");
+      mine.textContent = wanted;
+      document.head.appendChild(mine);
+    };
+
+    ensure();
+
+    // POLISH 1.173.3: Nextova metapodatkovna plast je naslov prepisovala
+    // TUDI po čiščenju (pozni hidracijski flush ustvari novega). Dokler je
+    // ta komponenta montirana, je 404 lastnik zavihka — opazovalec na
+    // <head> vsak poseg tujca takoj povrne v pravo stanje (idempotentno:
+    // če je naš naslov nedotaknjen, ne naredi ničesar → ni zanke).
+    const observer = new MutationObserver(() => {
+      if (!mine || !mine.isConnected || mine.textContent !== wanted) {
+        ensure();
+      }
+    });
+    observer.observe(document.head, {
+      subtree: true,
+      childList: true,
+      characterData: true,
+    });
+
     return () => {
-      // Ob odhodu s 404 (klientka navigacija) odstranimo svoj naslov —
-      // naslednja ruta prinese svojega (Next metadata ob renderu).
-      title.remove();
+      observer.disconnect();
+      // Ob odhodu s 404 odstranimo svoj naslov — naslednja ruta prinese
+      // svojega (Next metadata ob renderu nove strani).
+      mine?.remove();
     };
   }, [isEn]);
 

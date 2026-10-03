@@ -210,18 +210,20 @@ describe("POLISH 1.173.0 ② SL ton: vikanje iztrebljeno iz B2C slovarja", () =>
 // ---------------------------------------------------------------------------
 describe("POLISH 1.173.0 ③ 404 naslov zavihka", () => {
   test("not-found prevzame naslov zavihka: počisti VSE <title> + zapiše enega (dvojezično)", () => {
-    // POLISH 1.173.2 (po QA na 1.173.0/1.173.1): klientski efekt sam je
+    // POLISH 1.173.3 (po QA na 1.173.0–1.173.2): klientski efekt sam je
     // izgubil tekmo z Next metapodatki (prepis nazaj po hidraciji);
-    // deklarativen <title> se pripel ZA layoutovim (brskalnik bere
-    // PRVEGA — opazovanih 3). Zmagovalna strategija: effect počisti vse
-    // <title> in zapiše edinega svojega.
+    // deklarativen <title> se je pripel ZA layoutovim (brskalnik bere
+    // PRVEGA); tudi enkratno čiščenje je pozni metapodatkovni flush
+    // prepisal. Zmagovalna strategija: čiščenje + MutationObserver, ki
+    // naslov vzdržuje, DOKLER je 404 montiran (idempotentno, brez zanke).
     expect(NOT_FOUND_SRC).toContain('document.querySelectorAll("title")');
-    expect(NOT_FOUND_SRC).toContain("t.remove()");
-    expect(NOT_FOUND_SRC).toContain("document.head.appendChild(title)");
+    expect(NOT_FOUND_SRC).toContain("document.head.appendChild(mine)");
+    expect(NOT_FOUND_SRC).toContain("new MutationObserver");
     expect(NOT_FOUND_SRC).toContain("404 — Te strani (še) ni na zemljevidu");
     expect(NOT_FOUND_SRC).toContain("404 — This page is not on the map yet");
-    // hišni red: ob odhodu s 404 svoj naslov odstrani (cleanup)
-    expect(NOT_FOUND_SRC).toContain("title.remove();");
+    // hišni red: ob odhodu s 404 opazovalec odklopi + svoj naslov odstrani
+    expect(NOT_FOUND_SRC).toContain("observer.disconnect()");
+    expect(NOT_FOUND_SRC).toContain("mine?.remove()");
   });
 
   test("dvojezična detekcija ostaja (isti kanon kot telo strani)", () => {
