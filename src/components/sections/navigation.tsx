@@ -506,7 +506,14 @@ export function Navigation({ solid = false }: { solid?: boolean }) {
                 onMore → setMobileOpen). Sheet OSTAJA nespremenjen: vseh 13
                 destinacij + jezikovna/source kontrola + CTA. */}
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-              <SheetContent side="right" className="w-[82vw] sm:max-w-sm">
+              {/* POLISH 1.173.1: aria-describedby={undefined} — navigacijski
+                  meni je samoopisovalen (SheetTitle "Meni"); brez tega je
+                  Radix v konzolo pisal opozorilo o manjkajočem opisu */}
+              <SheetContent
+                side="right"
+                aria-describedby={undefined}
+                className="w-[82vw] sm:max-w-sm"
+              >
                 <SheetTitle className="px-4 pt-4 text-lg font-bold text-foreground">
                   <span className="flex items-center gap-2">
                     <span className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground">

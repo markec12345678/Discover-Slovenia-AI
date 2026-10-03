@@ -209,14 +209,27 @@ describe("POLISH 1.173.0 ② SL ton: vikanje iztrebljeno iz B2C slovarja", () =>
 // ③ 404 — naslov zavihka
 // ---------------------------------------------------------------------------
 describe("POLISH 1.173.0 ③ 404 naslov zavihka", () => {
-  test("not-found nastavi dokument.title z \"404 —\" predpono (dvojezično)", () => {
-    expect(NOT_FOUND_SRC).toContain("document.title");
+  test("not-found nosi DEKLARATIVEN <title> z \"404 —\" predpono (dvojezično)", () => {
+    // POLISH 1.173.1: deklarativen <title> (React 19 dviguje v <head> s
+    // prednostjo) — useEffect iz 1.173.0 je bil prepoznen (metadata plast
+    // ga je prepisala nazaj po hidraciji)
+    expect(NOT_FOUND_SRC).toContain("<title>");
     expect(NOT_FOUND_SRC).toContain("404 — Te strani (še) ni na zemljevidu");
     expect(NOT_FOUND_SRC).toContain("404 — This page is not on the map yet");
+    expect(NOT_FOUND_SRC).not.toContain("useEffect");
   });
 
   test("dvojezična detekcija ostaja (isti kanon kot telo strani)", () => {
     expect(NOT_FOUND_SRC).toContain('window.location.pathname.startsWith("/en")');
+  });
+
+  test("SITE_DESCRIPTION (seo.ts) je tikanje + aktualni obseg (38, Saranda)", () => {
+    const seo = read("lib/seo.ts");
+    expect(seo).toContain("Odkrij Slovenijo z AI-poganjanim");
+    expect(seo).toContain("38 destinacij od Bleda do Sarande");
+    // zastarelo vikanje/številka se ne vračata
+    expect(seo).not.toContain("Odkrijte Slovenijo z AI");
+    expect(seo).not.toContain("22 najlep");
   });
 });
 

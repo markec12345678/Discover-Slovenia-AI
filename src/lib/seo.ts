@@ -11,7 +11,10 @@ export const BASE_URL =
 export const SITE_NAME = "Discover Slovenia AI";
 export const SITE_TAGLINE = "AI načrtovalec potovanj";
 export const SITE_DESCRIPTION =
-  "Odkrijte Slovenijo z AI-poganjanim načrtovalcem potovanj. 22 najlepših destinacij od Bleda do Pirana, z interaktivnim zemljevidom, vremenom in direktnimi rezervacijami.";
+  // POLISH 1.173.1: ton usklajen z blagovno znamko (tikanje — DE/IT/ES so
+  // vsi informalni) + ZASTARELI ŠTEVILKI/MEJI popravljeni (22→38 destinacij,
+  // Piran→Saranda — katalog pokriva Slovenijo in zahodni Balkan)
+  "Odkrij Slovenijo z AI-poganjanim načrtovalcem potovanj. 38 destinacij od Bleda do Sarande, z interaktivnim zemljevidom, vremenom in direktnimi rezervacijami.";
 
 // Privzeti OG/Twitter thumbnail (MONET-10): PNG 1200×630 — SVG (prejšnji
 // logo.svg) Facebook/WhatsApp/Telegram/LinkedIn NE upodabljajo v predogledih,

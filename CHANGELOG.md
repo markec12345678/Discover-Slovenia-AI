@@ -73,6 +73,35 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.173.1] — 2026-10-03 (POLIRNI KROG, produkcijska QA najdeni popravki)
+
+### Popravljeno
+
+- **404 naslov zavihka: deklarativen `<title>`** (React 19 dviguje v `<head>`
+  s prednostjo pred metapodatki plasti). Klientski efekt iz 1.173.0 je bil
+  prostostno prepoznen — produkcijska QA na 1.173.0 je pokazala, da Nextova
+  metapodatkovna plast naslov prepiše NAZAJ po hidraciji. Deklarativni
+  pristop zmaguje tekmo po definiciji in nosi tudi SSR (prvi bajt
+  iskalnikom).
+- **SITE_DESCRIPTION (seo.ts)**: „Odkrijte Slovenijo … 22 najlepših
+  destinacij od Bleda do Pirana" → „Odkrij Slovenijo … 38 destinacij od
+  Bleda do Sarande" — ton usklajen z znamko (tikanje) + ZASTARELI podatek
+  popravljen (opis je vidno povsod: Google utrinki, OG/Twitter deljenje,
+  JSON-LD).
+- **Mobilni Sheet: konzolno opozorilo Radixa odstranjeno**
+  (`aria-describedby={undefined}` — navigacijski meni je samoopisovalen;
+  QA konzola je bila čista razen tega opozorila o manjkajočem opisu
+  dialoga).
+
+### Testi
+
+- `polish-1-173-0-round.test.ts`: 404 test nadgrajen na deklarativen
+  naslov (+ varovalka, da se klientski efekt ne vrne) + NOVA varovalka
+  SITE_DESCRIPTION (tikanje + 38/Saranda; zastareli obliki se ne smeta
+  vrniti). Regresija: **5.045 pass** (+1), lint 0, tsc 0.
+
+---
+
 ## [1.172.2] — 2026-10-03 (#24 Sklop 9 regresija: 4+ postankov v shemi dneva NE razširijo strani)
 
 ### Popravljeno

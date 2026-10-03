@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
 import Link from "next/link";
 import { Compass, Home, Search } from "lucide-react";
 
@@ -15,25 +14,24 @@ import { Compass, Home, Search } from "lucide-react";
 // RSC prevajalske plasti za ne-lokalizirane/nezname poti).
 //
 // POLISH 1.173.0: dokument naslov (zavihek brskalnika) je prej ostal
-// generičen; sedaj se iskreno oglasi "404 — …" v jeziku uporabnika
-// (isti dvojezični kanon kot telo strani).
+// generičen; POLISH 1.173.1: deklarativen <title> (React 19 dvigne v
+// <head> s prednostjo) — klientski efekt iz 1.173.0 je bil prostostno
+// prepoznen (Nextova metapodatkovna plast je naslov prepisala nazaj
+// po hidraciji). Deklarativni nosi tudi SSR (prva bemla iskalnikom).
 // ============================================================================
+
+const TITLE_SL = "404 — Te strani (še) ni na zemljevidu | Discover Slovenia AI";
+const TITLE_EN = "404 — This page is not on the map yet | Discover Slovenia AI";
 
 export default function NotFound() {
   const isEn =
     typeof window !== "undefined" &&
     window.location.pathname.startsWith("/en");
 
-  // POLISH 1.173.0: naslov zavihka — a11y (bralniki napovejo stanje) in
-  // jasnost v zgodovini brskalnika. ("use client" komponenta ne more
-  // izvoziti metadata — klientka nastavitev je kanonična rešitev.)
-  useEffect(() => {
-    document.title = isEn
-      ? "404 — This page is not on the map yet | Discover Slovenia AI"
-      : "404 — Te strani (še) ni na zemljevidu | Discover Slovenia AI";
-  }, [isEn]);
-
   return (
+    <>
+      {/* React 19: dvignjen v <head>, povozi naslov plasti za to stran */}
+      <title>{isEn ? TITLE_EN : TITLE_SL}</title>
     <main
       role="main"
       className="flex min-h-[80vh] flex-col items-center justify-center gap-6 bg-background px-4 py-16 text-center"
@@ -73,5 +71,6 @@ export default function NotFound() {
         </div>
       </div>
     </main>
+    </>
   );
 }
