@@ -117,4 +117,10 @@ premice). Skupaj 19 dokazov.
   1.163.3** — prehodna napaka vira (Open-Meteo); vsi trije načini ob
   ponovni preverbi vračajo 200 s svežimi podatki; NAČIN A utrjen z
   `AbortSignal.timeout(4000)` (pariteta z NAČINOM B; test ⑧d).
-- Vercel deploy (kvota/GitHub App — priporočilo iz #21 ostaja).
+- ~~Vercel deploy (kvota/GitHub App — priporočilo iz #21 ostaja).~~
+  **ZAPRTA 2026-10-03** — po ponastavitvi brezplačne kvote (2. 10.,
+  17:40 UTC) se je Vercel samodejno osvežil na **1.172.2** (health
+  preverjen 3. 10. 13:35 UTC; enaka verzija kot Render — obe produkciji
+  usklajeni in zdravi, CI zelen na `9877270`). Priporočilo iz #21
+  (namestitev Vercel GitHub App za odpornejše deploe) ostaja neobvezna
+  izboljšava, ne ovira več.
