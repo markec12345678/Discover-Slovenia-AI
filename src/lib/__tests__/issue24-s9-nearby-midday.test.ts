@@ -338,8 +338,23 @@ describe("ISSUE #24 Sklop 9 — ⑥ nearby_stop_added 3-plastna pariteta", () =>
 });
 
 // ---------------------------------------------------------------------------
-// ⑦ varnostna rezerva prostega časa OSTAJA (Sklop 9 ne odpira okna širše)
+// ⑧ 0-preliv regresija — sr-only stanja v shemi dneva (QA odkril na produkciji)
 // ---------------------------------------------------------------------------
+
+describe("ISSUE #24 Sklop 9 — ⑧ shema dneva: 4+ postankov NE razširijo strani", () => {
+  test("① stop stolpec nosi `relative` (sr-only containing block = scroll, ne stran)", () => {
+    // QA dokaz (Render, 390 px): po nearby vstavku je dan imel 4 postanke →
+    // sr-only stanja (position:absolute BREZ pozicioniranega prednika) so
+    // razširila documentElement.scrollWidth na 462 > 390. `relative` na
+    // stolpcu postanka jih vsebuje v overflow-x-auto scroll zabojniku.
+    const src = norm(source("src/components/sections/go-day-line.tsx"));
+    expect(src).toContain(
+      "relative flex w-24 flex-col items-center gap-1 px-1 text-center sm:w-28"
+    );
+    // scroll zabojnik ostaja (horizontalna shema — mobile-first)
+    expect(src).toContain("overflow-x-auto");
+  });
+});
 
 describe("ISSUE #24 Sklop 9 — ⑦ varnost okna nedotaknjena (§10)", () => {
   test("① DEFAULT_FREE_TIME_CONFIG vrednosti so testno zaklenjene", () => {

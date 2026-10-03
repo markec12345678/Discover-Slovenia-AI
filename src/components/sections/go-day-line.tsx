@@ -122,7 +122,13 @@ export function GoDayLine({ line, origin, lang }: GoDayLineProps) {
                     : undefined
                 }
               >
-                <div className="flex w-24 flex-col items-center gap-1 px-1 text-center sm:w-28">
+                {/* ISSUE #24 Sklop 9 (1.172.1) — `relative`: sr-only stanja so
+                    position:absolute; brez pozicioniranega prednika je njihov
+                    containing block STRAN (ne vsebina scroll zabojnika) → pri
+                    4+ postankih (npr. po nearby vstavku) so razširili
+                    documentElement.scrollWidth čez zaslon (merjeno 462 > 390).
+                    Z `relative` na stolpcu postanka jih vsebuje scroll. */}
+                <div className="relative flex w-24 flex-col items-center gap-1 px-1 text-center sm:w-28">
                   <div
                     className={`flex size-8 items-center justify-center rounded-full border text-sm ${style.dot}`}
                     aria-hidden="true"

@@ -7,6 +7,27 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.172.2] — 2026-10-03 (#24 Sklop 9 regresija: 4+ postankov v shemi dneva NE razširijo strani)
+
+### Popravljeno
+
+- **0-preliv kršitev pri 4+ postankih shema dneva** (QA produkcijski dokaz,
+  Render 390 px, po nearby vstavku): sr-only stanja (»opravljen«/»trenutni
+  cilj«/»prihodnje«) so `position: absolute` BREZ pozicioniranega prednika —
+  njihov containing block je bila STRAN, ne vsebina `overflow-x-auto`
+  scroll zabojnika → 4. postanek je razširil `documentElement.scrollWidth`
+  na 462 > 390 (horizontalni pomik celotne strani). Popravek: stolpec
+  postanka nosi `relative` (sr-only vsebuje scroll) — izmerjeno 390 ✓.
+  Latentna napaka od TASK 102 (#21 §10), ki jo je Sklop 9 (vstavek naredi
+  dan daljši) lahko priklical — odkrita in zaprta v isti seriji.
+
+### Testi
+
+- `issue24-s9-nearby-midday.test.ts` ⑧: source contract `relative` na
+  stolpcu postanka + `overflow-x-auto` zabojnik ostaja.
+
+---
+
 ## [1.172.1] — 2026-10-03 (#24 Sklop 9 popravka UX: potrditev dodajanja ostane vidna)
 
 ### Popravljeno
