@@ -118,17 +118,32 @@ export function nearbyCandidateToEntry(candidate: NearbyAddCandidate): TripEntry
 }
 
 // ---------------------------------------------------------------------------
-// UI OZNAKE
+// UI OZNAKE (6-jezične — ISSUE #24 Sklop 8 faza 2)
 // ---------------------------------------------------------------------------
 
 export const GO_EDIT_LABELS = {
   added: {
     sl: (title: string) => `✓ ${title} dodan na konec dneva.`,
     en: (title: string) => `✓ ${title} added to the end of the day.`,
+    it: (title: string) => `✓ ${title} aggiunto alla fine della giornata.`,
+    de: (title: string) => `✓ ${title} am Ende des Tages hinzugefügt.`,
+    fr: (title: string) => `✓ ${title} ajouté à la fin de la journée.`,
+    es: (title: string) => `✓ ${title} añadido al final del día.`,
   },
   notPossibleV1: {
     sl: "Ta pot je kanonična (iz načrtovalnika potovanj) — dodajanje med potjo ni mogoče. Odpri lokacijo na zemljevidu.",
     en: "This trip is canonical (from the journey planner) — adding stops mid-trip is not possible. Open the location on the map.",
+    it: "Questo viaggio è canonico (dal pianificatore di viaggio) — aggiungere tappe durante il viaggio non è possibile. Apri la posizione sulla mappa.",
+    de: "Diese Reise ist kanonisch (aus dem Reiseplaner) — Hinzufügen von Stationen unterwegs ist nicht möglich. Öffne den Ort auf der Karte.",
+    fr: "Ce voyage est canonique (du planificateur de voyage) — ajouter des arrêts en cours de route n'est pas possible. Ouvre le lieu sur la carte.",
+    es: "Este viaje es canónico (del planificador de viajes) — añadir paradas durante el trayecto no es posible. Abre la ubicación en el mapa.",
   },
-  mapLink: { sl: "Odpri na zemljevidu", en: "Open on the map" },
+  mapLink: {
+    sl: "Odpri na zemljevidu",
+    en: "Open on the map",
+    it: "Apri sulla mappa",
+    de: "Auf der Karte öffnen",
+    fr: "Ouvrir sur la carte",
+    es: "Abrir en el mapa",
+  },
 } as const;

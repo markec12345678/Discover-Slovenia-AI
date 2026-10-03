@@ -21,6 +21,8 @@
 // ============================================================================
 
 import { haversineKm } from "@/lib/geo-corridor";
+// ISSUE #24 Sklop 8 (1.170.0): 6-jezične oznake (faza 2 — polni prevodi).
+import type { GoStrings } from "./go-lang";
 
 // ---------------------------------------------------------------------------
 // TIP — TRAVEL STATE (§3: ločeno od reservation state)
@@ -319,25 +321,95 @@ export function accuracyClassOf(accuracyM: number | undefined | null): AccuracyC
   return "low";
 }
 
-/** Oznake razredov (dvojezične — za prikaz ob ±X m). */
-export const ACCURACY_CLASS_LABELS: Record<AccuracyClass, { sl: string; en: string }> = {
-  high: { sl: "natančnost dobra", en: "accuracy good" },
-  medium: { sl: "natančnost srednja", en: "accuracy medium" },
-  low: { sl: "natančnost nizka", en: "accuracy low" },
+/** Oznake razredov (6-jezične — ISSUE #24 Sklop 8 faza 2, za prikaz ob ±X m). */
+export const ACCURACY_CLASS_LABELS: Record<AccuracyClass, GoStrings> = {
+  high: {
+    sl: "natančnost dobra",
+    en: "accuracy good",
+    it: "precisione buona",
+    de: "Genauigkeit gut",
+    fr: "précision bonne",
+    es: "precisión buena",
+  },
+  medium: {
+    sl: "natančnost srednja",
+    en: "accuracy medium",
+    it: "precisione media",
+    de: "Genauigkeit mittel",
+    fr: "précision moyenne",
+    es: "precisión media",
+  },
+  low: {
+    sl: "natančnost nizka",
+    en: "accuracy low",
+    it: "precisione bassa",
+    de: "Genauigkeit niedrig",
+    fr: "précision faible",
+    es: "precisión baja",
+  },
 };
 
 // ---------------------------------------------------------------------------
-// UI OZNAKE (dvojezične — L vzorec, ISKRENE)
+// UI OZNAKE (6-jezične — ISSUE #24 Sklop 8 faza 2, ISKRENE)
 // ---------------------------------------------------------------------------
 
-export const TRAVEL_LABELS: Record<TravelStatus, { sl: string; en: string }> = {
-  upcoming: { sl: "Prihodnji postanek", en: "Upcoming stop" },
-  active: { sl: "Naslednji postanek", en: "Next stop" },
-  navigating: { sl: "Na poti do postanka", en: "On the way to the stop" },
-  near_destination: { sl: "Približuješ se", en: "Approaching" },
-  arrived: { sl: "Prišel si na lokacijo", en: "You have arrived" },
-  completed: { sl: "Zaključeno", en: "Completed" },
-  skipped: { sl: "Preskočeno", en: "Skipped" },
+export const TRAVEL_LABELS: Record<TravelStatus, GoStrings> = {
+  upcoming: {
+    sl: "Prihodnji postanek",
+    en: "Upcoming stop",
+    it: "Prossima tappa in programma",
+    de: "Kommende Station",
+    fr: "Prochain arrêt à venir",
+    es: "Próxima parada",
+  },
+  active: {
+    sl: "Naslednji postanek",
+    en: "Next stop",
+    it: "Prossima tappa",
+    de: "Nächste Station",
+    fr: "Prochain arrêt",
+    es: "Siguiente parada",
+  },
+  navigating: {
+    sl: "Na poti do postanka",
+    en: "On the way to the stop",
+    it: "In viaggio verso la tappa",
+    de: "Unterwegs zur Station",
+    fr: "En route vers l'arrêt",
+    es: "Camino de la parada",
+  },
+  near_destination: {
+    sl: "Približuješ se",
+    en: "Approaching",
+    it: "Ti stai avvicinando",
+    de: "Du näherst dich",
+    fr: "Tu approaches",
+    es: "Te estás acercando",
+  },
+  arrived: {
+    sl: "Prišel si na lokacijo",
+    en: "You have arrived",
+    it: "Sei arrivato",
+    de: "Du bist angekommen",
+    fr: "Tu es arrivé",
+    es: "Has llegado",
+  },
+  completed: {
+    sl: "Zaključeno",
+    en: "Completed",
+    it: "Completato",
+    de: "Abgeschlossen",
+    fr: "Terminé",
+    es: "Completado",
+  },
+  skipped: {
+    sl: "Preskočeno",
+    en: "Skipped",
+    it: "Saltato",
+    de: "Übersprungen",
+    fr: "Passé",
+    es: "Omitido",
+  },
 };
 
 export const ARRIVAL_LABELS = {
@@ -345,25 +417,45 @@ export const ARRIVAL_LABELS = {
   near: {
     sl: (m: number) => `Približuješ se — ${m} m`,
     en: (m: number) => `Approaching — ${m} m`,
+    it: (m: number) => `Ti stai avvicinando — ${m} m`,
+    de: (m: number) => `Du näherst dich — ${m} m`,
+    fr: (m: number) => `Tu approaches — ${m} m`,
+    es: (m: number) => `Te estás acercando — ${m} m`,
   },
   /** Prihod — stabilen (samo stabilized izpis). */
   arrived: {
     sl: (title: string) => `✓ Prišel si na lokacijo ${title}`,
     en: (title: string) => `✓ You have arrived at ${title}`,
+    it: (title: string) => `✓ Sei arrivato a ${title}`,
+    de: (title: string) => `✓ Du bist bei ${title} angekommen`,
+    fr: (title: string) => `✓ Tu es arrivé à ${title}`,
+    es: (title: string) => `✓ Has llegado a ${title}`,
   },
   /** Iskrena ločitev dveh resnic: GPS prihod ≠ rezervacija. */
   arrivedHint: {
     sl: "GPS prihod NE potrdi rezervacije — rezervacija ostaja pri ponudniku. Potrdi, ko si res zaključil.",
     en: "GPS arrival does NOT confirm a booking — the booking stays with the provider. Confirm when you are truly done.",
+    it: "L'arrivo via GPS NON conferma la prenotazione — la prenotazione resta presso il fornitore. Conferma quando hai davvero finito.",
+    de: "Die GPS-Ankunft bestätigt KEINE Buchung — die Buchung bleibt beim Anbieter. Bestätige, wenn du wirklich fertig bist.",
+    fr: "L'arrivée GPS ne confirme PAS une réservation — la réservation reste chez le prestataire. Confirme quand tu as vraiment terminé.",
+    es: "La llegada por GPS NO confirma una reserva — la reserva sigue con el proveedor. Confirma cuando hayas terminado de verdad.",
   },
   /** Zastarela fiksacija (NE trdimo svežine). */
   stale: {
     sl: (min: number) => `zadnja fiksacija pred ${min} min`,
     en: (min: number) => `last fix ${min} min ago`,
+    it: (min: number) => `ultima fissazione ${min} min fa`,
+    de: (min: number) => `letzte Fixierung vor ${min} Min.`,
+    fr: (min: number) => `dernier pointage il y a ${min} min`,
+    es: (min: number) => `última fijación hace ${min} min`,
   },
   /** Prag prihoda (transparentnost klasifikacije). */
   radiusHint: {
     sl: (m: number) => `prihod = GPS znotraj ~${m} m (glede na natančnost)`,
     en: (m: number) => `arrival = GPS within ~${m} m (based on accuracy)`,
+    it: (m: number) => `arrivo = GPS entro ~${m} m (in base alla precisione)`,
+    de: (m: number) => `Ankunft = GPS innerhalb von ~${m} m (abhängig von der Genauigkeit)`,
+    fr: (m: number) => `arrivée = GPS à moins de ~${m} m (selon la précision)`,
+    es: (m: number) => `llegada = GPS a menos de ~${m} m (según la precisión)`,
   },
 } as const;

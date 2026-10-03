@@ -22,6 +22,8 @@
 import { haversineKm } from "@/lib/geo-corridor";
 import type { DayRouteSummary, MyTripDay, MyTripView, TripEntry } from "./trip-view";
 import type { GoDayLineItem } from "./day-line";
+// ISSUE #24 Sklop 8 (1.170.0): 6-jezični CARDINALS/GO_LABELS (faza 2).
+import type { GoStrings } from "./go-lang";
 import { resolveStopGeo, type StopGeo } from "./resolve-stop-geo";
 import {
   accuracyClassOf,
@@ -63,7 +65,7 @@ export interface GoEntryCard {
   /** Premica (haversine) od GPS do postanka — SAMO če obstajata obe geo. */
   distanceKm?: number;
   /** Kardinalna smer do postanka (sever/…) — SAMO če obstajata obe geo. */
-  bearingLabel?: { sl: string; en: string };
+  bearingLabel?: GoStrings;
   /** Minute do realnega začetka (SAMO pri realnem času dneva). */
   countdownMin?: number;
   /** ISSUE #21 — TRAVEL state (LOČEN od rezervacijskega statusa; samo
@@ -151,19 +153,19 @@ export function bearingDeg(
   return (deg + 360) % 360;
 }
 
-const CARDINALS: { sl: string; en: string }[] = [
-  { sl: "sever", en: "north" }, // 0°
-  { sl: "severovzhod", en: "northeast" }, // 45°
-  { sl: "vzhod", en: "east" }, // 90°
-  { sl: "jugovzhod", en: "southeast" }, // 135°
-  { sl: "jug", en: "south" }, // 180°
-  { sl: "jugozahod", en: "southwest" }, // 225°
-  { sl: "zahod", en: "west" }, // 270°
-  { sl: "severozahod", en: "northwest" }, // 315°
+const CARDINALS: GoStrings[] = [
+  { sl: "sever", en: "north", it: "nord", de: "Norden", fr: "nord", es: "norte" }, // 0°
+  { sl: "severovzhod", en: "northeast", it: "nord-est", de: "Nordosten", fr: "nord-est", es: "noreste" }, // 45°
+  { sl: "vzhod", en: "east", it: "est", de: "Osten", fr: "est", es: "este" }, // 90°
+  { sl: "jugovzhod", en: "southeast", it: "sud-est", de: "Südosten", fr: "sud-est", es: "sureste" }, // 135°
+  { sl: "jug", en: "south", it: "sud", de: "Süden", fr: "sud", es: "sur" }, // 180°
+  { sl: "jugozahod", en: "southwest", it: "sud-ovest", de: "Südwesten", fr: "sud-ouest", es: "suroeste" }, // 225°
+  { sl: "zahod", en: "west", it: "ovest", de: "Westen", fr: "ouest", es: "oeste" }, // 270°
+  { sl: "severozahod", en: "northwest", it: "nord-ovest", de: "Nordwesten", fr: "nord-ouest", es: "noroeste" }, // 315°
 ];
 
 /** Kardinalna smer azimuta (8 sektorjev po 45°). */
-export function cardinalLabel(deg: number): { sl: string; en: string } {
+export function cardinalLabel(deg: number): GoStrings {
   const d = ((deg % 360) + 360) % 360;
   return CARDINALS[Math.round(d / 45) % 8];
 }
@@ -516,29 +518,49 @@ export function buildGoView(
 }
 
 // ---------------------------------------------------------------------------
-// UI OZNAKE (L vzorec — dvojezične, ISKRENE)
+// UI OZNAKE (L vzorec — 6-jezične, ISKRENE; ISSUE #24 Sklop 8 faza 2)
 // ---------------------------------------------------------------------------
 
 export const GO_LABELS = {
   positionHint: {
     sl: "Razdalje so PREMICA (v zraku), ne vozne razdalje.",
     en: "Distances are STRAIGHT-LINE (as the crow flies), not driving distances.",
+    it: "Le distanze sono IN LINEA D'ARIA, non distanze stradali.",
+    de: "Die Entfernungen sind LUFTLINIE, keine Fahrstrecken.",
+    fr: "Les distances sont À VOL D'OISEAU, pas des distances routières.",
+    es: "Las distancias son EN LÍNEA RECTA, no distancias por carretera.",
   },
   noPosition: {
     sl: "Vklopi GPS, da vidiš razdaljo in smer do naslednjega postanka.",
     en: "Turn on GPS to see distance and direction to your next stop.",
+    it: "Attiva il GPS per vedere distanza e direzione fino alla prossima tappa.",
+    de: "Aktiviere das GPS, um Entfernung und Richtung zur nächsten Station zu sehen.",
+    fr: "Active le GPS pour voir la distance et la direction du prochain arrêt.",
+    es: "Activa el GPS para ver la distancia y la dirección a tu próxima parada.",
   },
   noTimesToday: {
     sl: "V načrtu za ta dan ni objavljenih realnih ur — vrstni red je po tvoji izbiri.",
     en: "No real published times for this day — the order is your own choice.",
+    it: "Nel piano di questo giorno non ci sono orari reali pubblicati — l'ordine è una tua scelta.",
+    de: "Für diesen Tag sind keine echten veröffentlichten Zeiten im Plan — die Reihenfolge ist deine eigene Wahl.",
+    fr: "Aucun horaire réel publié pour cette journée dans le plan — l'ordre est ton choix.",
+    es: "No hay horarios reales publicados para este día en el plan — el orden es tu elección.",
   },
   noEntryLeft: {
     sl: "Za ta dan ni več odprtih postankov — pogledaj naslednji dan ali oddihni. 🌿",
     en: "No open stops left for this day — check the next day or take a rest. 🌿",
+    it: "Nessuna tappa aperta rimasta per oggi — guarda il giorno successivo o riposati. 🌿",
+    de: "Keine offenen Stationen mehr für heute — sieh dir den nächsten Tag an oder gönn dir eine Pause. 🌿",
+    fr: "Plus aucun arrêt ouvert pour cette journée — regarde le jour suivant ou repose-toi. 🌿",
+    es: "No quedan paradas abiertas para hoy — mira el día siguiente o descansa. 🌿",
   },
   doneAt: {
     sl: (iso: string) => `opravljeno ob ${iso.slice(11, 16)}`,
     en: (iso: string) => `done at ${iso.slice(11, 16)}`,
+    it: (iso: string) => `completato alle ${iso.slice(11, 16)}`,
+    de: (iso: string) => `erledigt um ${iso.slice(11, 16)} Uhr`,
+    fr: (iso: string) => `terminé à ${iso.slice(11, 16)}`,
+    es: (iso: string) => `completado a las ${iso.slice(11, 16)}`,
   },
   countdown: {
     sl: (min: number) =>
@@ -553,5 +575,29 @@ export const GO_LABELS = {
         : min === 0
           ? "right now"
           : `started ${Math.abs(min)} min ago`,
+    it: (min: number) =>
+      min > 0
+        ? `tra ${min} min`
+        : min === 0
+          ? "proprio ora"
+          : `iniziato ${Math.abs(min)} min fa`,
+    de: (min: number) =>
+      min > 0
+        ? `in ${min} Min.`
+        : min === 0
+          ? "genau jetzt"
+          : `vor ${Math.abs(min)} Min. begonnen`,
+    fr: (min: number) =>
+      min > 0
+        ? `dans ${min} min`
+        : min === 0
+          ? "en ce moment"
+          : `commencé il y a ${Math.abs(min)} min`,
+    es: (min: number) =>
+      min > 0
+        ? `en ${min} min`
+        : min === 0
+          ? "justo ahora"
+          : `empezó hace ${Math.abs(min)} min`,
   },
 } as const;

@@ -26,6 +26,8 @@ import {
   type GuardianConflict,
 } from "./conflict-detect";
 import type { ReserveConfig } from "./time-reserve";
+// ISSUE #24 Sklop 8 (1.170.0): 6-jezične oznake + goAll gradilec (faza 2).
+import { goAll, type GoFn, type GoStrings } from "./go-lang";
 
 // ---------------------------------------------------------------------------
 // TIP
@@ -38,9 +40,9 @@ export type TripHealth = "ON_TRACK" | "NEEDS_ATTENTION" | "BLOCKED" | "UNKNOWN";
 export interface GuardianSnapshot {
   health: TripHealth;
   /** Naslov stanja (🟢/🟠/🔴/⚪ + uporabniško ime — §30.E, brez tehniških izrazov). */
-  headline: { sl: string; en: string };
+  headline: GoStrings;
   /** Ena vrstica dejstev pod naslovom (samo realni podatki). */
-  detail: { sl: string; en: string };
+  detail: GoStrings;
   reserve: TimeReserve;
   conflicts: GuardianConflict[];
   /** Prvi attention konflikt (ta ga UX izpiše kot glavno kartico). */
@@ -132,8 +134,8 @@ export interface HealthInput {
  */
 export function assessTripHealth(input: HealthInput): {
   health: TripHealth;
-  headline: { sl: string; en: string };
-  detail: { sl: string; en: string };
+  headline: GoStrings;
+  detail: GoStrings;
 } {
   const next = input.view.next!;
   const nextKey = next.entry.key;
@@ -170,18 +172,14 @@ export function assessTripHealth(input: HealthInput): {
           input.reserve.eta != null &&
           input.reserve.bookingStart != null &&
           input.reserve.reserveMin != null
-            ? {
-                sl: RESERVE_LABELS.line.sl({
+            ? goAll(
+                RESERVE_LABELS.line,
+                {
                   start: input.reserve.bookingStart,
                   eta: input.reserve.eta.hhmm,
                   reserve: input.reserve.reserveMin,
-                }),
-                en: RESERVE_LABELS.line.en({
-                  start: input.reserve.bookingStart,
-                  eta: input.reserve.eta.hhmm,
-                  reserve: input.reserve.reserveMin,
-                }),
-              }
+                }
+              )
             : HEALTH_LABELS.noNumbers,
       };
     }
@@ -190,7 +188,7 @@ export function assessTripHealth(input: HealthInput): {
       return {
         health: "ON_TRACK",
         headline: HEALTH_LABELS.ON_TRACK,
-        detail: bilingualOf(HEALTH_LABELS.arrivedBeforeStart, next.entry.title),
+        detail: labelsOf(HEALTH_LABELS.arrivedBeforeStart, next.entry.title),
       };
     }
     return {
@@ -207,62 +205,110 @@ export function assessTripHealth(input: HealthInput): {
     return {
       health: "ON_TRACK",
       headline: HEALTH_LABELS.ON_TRACK,
-      detail: bilingualOf(HEALTH_LABELS.flexibleOk, next.entry.title),
+      detail: labelsOf(HEALTH_LABELS.flexibleOk, next.entry.title),
     };
   }
   return {
     health: "UNKNOWN",
     headline: HEALTH_LABELS.UNKNOWN,
-    detail: bilingualOf(HEALTH_LABELS.flexibleNoGeo, next.entry.title),
+    detail: labelsOf(HEALTH_LABELS.flexibleNoGeo, next.entry.title),
   };
 }
 
 // ---------------------------------------------------------------------------
-// UI OZNAKE (L vzorec — UPORABNIŠKA imena, ne tehniški izrazi §30.E)
+// UI OZNAKE (L vzorec — UPORABNIŠKA imena, ne tehniški izrazi §30.E;
+// 6-jezično — ISSUE #24 Sklop 8 faza 2)
 // ---------------------------------------------------------------------------
 
-/** Preslikava funkcijske oznake (sl/en) + argument → dvojezični objekt. */
-function bilingualOf(
-  f: { sl: (a: string) => string; en: (a: string) => string },
+/** Preslikava funkcijske oznake (6 jezikov) + argument → vsejezični objekt. */
+function labelsOf(
+  f: GoFn<[string], string>,
   arg: string
-): { sl: string; en: string } {
-  return { sl: f.sl(arg), en: f.en(arg) };
+): GoStrings {
+  return goAll(f, arg);
 }
 
 export const HEALTH_LABELS = {
-  ON_TRACK: { sl: "🟢 VSE TEČE PO NAČRTU", en: "🟢 EVERYTHING ON SCHEDULE" },
+  ON_TRACK: {
+    sl: "🟢 VSE TEČE PO NAČRTU",
+    en: "🟢 EVERYTHING ON SCHEDULE",
+    it: "🟢 TUTTO SECONDO I PIANI",
+    de: "🟢 ALLES IM ZEITPLAN",
+    fr: "🟢 TOUT EST CONFORME AU PROGRAMME",
+    es: "🟢 TODO SEGÚN LO PREVISTO",
+  },
   NEEDS_ATTENTION: {
     sl: "🟠 POTREBUJE TVOJO POZORNOST",
     en: "🟠 NEEDS YOUR ATTENTION",
+    it: "🟠 RICHIEDE LA TUA ATTENZIONE",
+    de: "🟠 ERFORDERT DEINE AUFMERKSAMKEIT",
+    fr: "🟠 NÉCESSITE TON ATTENTION",
+    es: "🟠 REQUIERE TU ATENCIÓN",
   },
   BLOCKED: {
     sl: "🔴 ZA NADALJEVANJE JE POTREBEN POSEG",
     en: "🔴 ACTION NEEDED TO CONTINUE",
+    it: "🔴 SERVE UN INTERVENTO PER CONTINUARE",
+    de: "🔴 EINGRIFF ERFORDERLICH, UM FORTZUFAHREN",
+    fr: "🔴 UNE ACTION EST NÉCESSAIRE POUR CONTINUER",
+    es: "🔴 HACE FALTA UNA ACCIÓN PARA CONTINUAR",
   },
   UNKNOWN: {
     sl: "⚪ PODATKOV NI DOVOLJ ZA ZANESLJIVO OCENO",
     en: "⚪ NOT ENOUGH DATA FOR A RELIABLE ASSESSMENT",
+    it: "⚪ DATI INSUFFICIENTI PER UNA VALUTAZIONE AFFIDABILE",
+    de: "⚪ NICHT GENUG DATEN FÜR EINE ZUVERLÄSSIGE EINSCHÄTZUNG",
+    fr: "⚪ PAS ASSEZ DE DONNÉES POUR UNE ÉVALUATION FIABLE",
+    es: "⚪ NO HAY DATOS SUFICIENTES PARA UNA EVALUACIÓN FIABLE",
   },
   arrivedBeforeStart: {
     sl: (title: string) =>
       `✓ Na lokaciji ${title} si — termin se še ni začel, na pravem si mestu.`,
     en: (title: string) =>
       `✓ You are at ${title} — the booking has not started yet; you are in the right place.`,
+    it: (title: string) =>
+      `✓ Sei a ${title} — la prenotazione non è ancora iniziata; sei nel posto giusto.`,
+    de: (title: string) =>
+      `✓ Du bist bei ${title} — die Buchung hat noch nicht begonnen; du bist richtig hier.`,
+    fr: (title: string) =>
+      `✓ Tu es à ${title} — la réservation n'a pas encore commencé ; tu es au bon endroit.`,
+    es: (title: string) =>
+      `✓ Estás en ${title} — la reserva aún no ha empezado; estás en el lugar correcto.`,
   },
   flexibleOk: {
     sl: (title: string) =>
       `Naslednji postanek: ${title} — brez fiksnega termina, čas je v tvojih rokah.`,
     en: (title: string) =>
       `Next stop: ${title} — no fixed time; the timing is up to you.`,
+    it: (title: string) =>
+      `Prossima tappa: ${title} — senza orario fisso; i tempi li decidi tu.`,
+    de: (title: string) =>
+      `Nächste Station: ${title} — ohne feste Zeit; das Timing liegt bei dir.`,
+    fr: (title: string) =>
+      `Prochain arrêt : ${title} — sans horaire fixe ; c'est toi qui décides du rythme.`,
+    es: (title: string) =>
+      `Próxima parada: ${title} — sin hora fija; el ritmo lo decides tú.`,
   },
   flexibleNoGeo: {
     sl: (title: string) =>
       `Naslednji postanek ${title} nima znane lokacije — izvedljivosti ne moremo oceniti.`,
     en: (title: string) =>
       `The next stop ${title} has no known location — we cannot assess feasibility.`,
+    it: (title: string) =>
+      `La prossima tappa ${title} non ha una posizione nota — non possiamo valutare la fattibilità.`,
+    de: (title: string) =>
+      `Die nächste Station ${title} hat keinen bekannten Standort — wir können die Machbarkeit nicht einschätzen.`,
+    fr: (title: string) =>
+      `Le prochain arrêt ${title} n'a pas d'emplacement connu — nous ne pouvons pas évaluer la faisabilité.`,
+    es: (title: string) =>
+      `La próxima parada ${title} no tiene ubicación conocida — no podemos evaluar la viabilidad.`,
   },
   noNumbers: {
     sl: "Rezerve ni mogoče izračunati — vklopi GPS za oceno prihoda.",
     en: "The reserve cannot be computed — turn on GPS for an arrival estimate.",
+    it: "Non è possibile calcolare il margine — attiva il GPS per una stima dell'arrivo.",
+    de: "Die Reserve lässt sich nicht berechnen — aktiviere das GPS für eine Ankunftsschätzung.",
+    fr: "La marge ne peut pas être calculée — active le GPS pour une estimation d'arrivée.",
+    es: "No se puede calcular el margen — activa el GPS para una estimación de llegada.",
   },
 } as const;

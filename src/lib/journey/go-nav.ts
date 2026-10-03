@@ -173,18 +173,33 @@ export function isCoarsePointer(): boolean {
 }
 
 // ---------------------------------------------------------------------------
-// UI OZNAKE (L vzorec — dvojezične, ISKRENE)
+// UI OZNAKE (6-jezične — ISSUE #24 Sklop 8 faza 2, ISKRENE)
 // ---------------------------------------------------------------------------
 
 export const GO_NAV_LABELS = {
-  navigate: { sl: "Navigiraj", en: "Navigate" },
+  navigate: {
+    sl: "Navigiraj",
+    en: "Navigate",
+    it: "Naviga",
+    de: "Navigieren",
+    fr: "Naviguer",
+    es: "Navegar",
+  },
   /** title/aria pojasnilo: IZRECNO zunanja aplikacija (ne lastna navigacija). */
   external: {
     sl: "Odpre zunanjo navigacijsko aplikacijo (izberi si svojo)",
     en: "Opens an external navigation app (choose your own)",
+    it: "Apre un'app di navigazione esterna (scegli la tua)",
+    de: "Öffnet eine externe Navigations-App (wähle deine eigene)",
+    fr: "Ouvre une application de navigation externe (choisis la tienne)",
+    es: "Abre una aplicación de navegación externa (elige la tuya)",
   },
   navigateAria: {
     sl: (title: string) => `Navigiraj do: ${title}`,
     en: (title: string) => `Navigate to: ${title}`,
+    it: (title: string) => `Naviga verso: ${title}`,
+    de: (title: string) => `Navigieren zu: ${title}`,
+    fr: (title: string) => `Naviguer vers : ${title}`,
+    es: (title: string) => `Navegar a: ${title}`,
   },
 } as const;

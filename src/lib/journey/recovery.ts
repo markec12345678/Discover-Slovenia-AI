@@ -25,6 +25,8 @@
 
 import type { GoView } from "./go-view";
 import type { GuardianConflict } from "./conflict-detect";
+// ISSUE #24 Sklop 8 (1.170.0): 6-jezične oznake (faza 2).
+import type { GoStrings } from "./go-lang";
 
 // ---------------------------------------------------------------------------
 // TIPI
@@ -54,9 +56,9 @@ export interface RecoveryStopRef {
 export interface RecoveryPlan {
   trigger: RecoveryTrigger;
   /** Naslov, ki ga uporabnik vidi (§30.G — jasna izjava problema). */
-  headline: { sl: string; en: string };
+  headline: GoStrings;
   /** Kaj se je spremenilo (dejstva). */
-  changed: { sl: string; en: string };
+  changed: GoStrings;
   /** Prizadeti postanki. */
   affected: RecoveryStopRef[];
   /** Postanki, ki ostajajo veljavni (neizvedeni, izvedljivi). */
@@ -133,6 +135,10 @@ export function assessRecovery(input: RecoveryInput): RecoveryPlan | null {
       headline: {
         sl: "Rezervacija za naslednji postanek je preklicana.",
         en: "The booking for the next stop has been cancelled.",
+        it: "La prenotazione per la prossima tappa è stata cancellata.",
+        de: "Die Buchung für die nächste Station wurde storniert.",
+        fr: "La réservation pour le prochain arrêt a été annulée.",
+        es: "La reserva para la próxima parada ha sido cancelada.",
       },
       changed: cancelled.facts,
       affectedKeys: [nextKey],
@@ -153,6 +159,10 @@ export function assessRecovery(input: RecoveryInput): RecoveryPlan | null {
       headline: {
         sl: "Termin je zamujen — kaj zdaj?",
         en: "The booking has been missed — what now?",
+        it: "La prenotazione è mancata — e adesso?",
+        de: "Die Buchung ist verpasst — was nun?",
+        fr: "La réservation est manquée — et maintenant ?",
+        es: "La reserva está perdida — ¿y ahora qué?",
       },
       changed: past.facts,
       affectedKeys: [past.stopKey],
@@ -177,6 +187,10 @@ export function assessRecovery(input: RecoveryInput): RecoveryPlan | null {
       headline: {
         sl: `Pred teboj je ${Math.round(farKm)} km do termina, ki je ogrožen.`,
         en: `${Math.round(farKm)} km to a booking that is now at risk.`,
+        it: `Davanti a te ci sono ${Math.round(farKm)} km fino a una prenotazione ormai a rischio.`,
+        de: `Vor dir liegen ${Math.round(farKm)} km bis zu einer Buchung, die jetzt gefährdet ist.`,
+        fr: `Tu as encore ${Math.round(farKm)} km jusqu'à une réservation désormais menacée.`,
+        es: `Te quedan ${Math.round(farKm)} km hasta una reserva que ya está en riesgo.`,
       },
       changed: atRisk.facts,
       affectedKeys: [nextKey],
@@ -198,6 +212,10 @@ export function assessRecovery(input: RecoveryInput): RecoveryPlan | null {
       headline: {
         sl: "Dan se je zamaknil — termin že teče.",
         en: "The day has slipped — a booking is already running.",
+        it: "La giornata è slittata — una prenotazione è già in corso.",
+        de: "Der Tag hat sich verschoben — eine Buchung läuft bereits.",
+        fr: "La journée a glissé — une réservation est déjà en cours.",
+        es: "El día se ha retrasado — una reserva ya está en curso.",
       },
       changed: started.facts,
       affectedKeys: [started.stopKey],
@@ -220,10 +238,18 @@ export function assessRecovery(input: RecoveryInput): RecoveryPlan | null {
         headline: {
           sl: `Preskočil si terminirani postanek ${s.entry.title}.`,
           en: `You skipped the timed stop ${s.entry.title}.`,
+          it: `Hai saltato la tappa con orario ${s.entry.title}.`,
+          de: `Du hast die terminierte Station ${s.entry.title} übersprungen.`,
+          fr: `Tu as passé l'arrêt horodaté ${s.entry.title}.`,
+          es: `Has omitido la parada con horario ${s.entry.title}.`,
         },
         changed: {
           sl: `Postanek ${s.entry.title} (termin ${s.entry.time?.start}) je izpadel iz dneva.`,
           en: `The stop ${s.entry.title} (time ${s.entry.time?.start}) dropped out of the day.`,
+          it: `La tappa ${s.entry.title} (orario ${s.entry.time?.start}) è uscita dalla giornata.`,
+          de: `Die Station ${s.entry.title} (Zeit ${s.entry.time?.start}) ist aus dem Tag gefallen.`,
+          fr: `L'arrêt ${s.entry.title} (horaire ${s.entry.time?.start}) a disparu de la journée.`,
+          es: `La parada ${s.entry.title} (horario ${s.entry.time?.start}) ha salido del día.`,
         },
         affectedKeys: [s.entry.key],
         atRiskKeys: [],
@@ -246,8 +272,8 @@ function buildPlan(
   view: GoView,
   parts: {
     trigger: RecoveryTrigger;
-    headline: { sl: string; en: string };
-    changed: { sl: string; en: string };
+    headline: GoStrings;
+    changed: GoStrings;
     affectedKeys: string[];
     atRiskKeys: string[];
     suggestions: { action: RecoverySuggestionAction; stopKey: string }[];
@@ -291,26 +317,86 @@ function buildPlan(
 }
 
 // ---------------------------------------------------------------------------
-// UI OZNAKE (§30.G uporabniška imena akcij — ne tehniški izrazi)
+// UI OZNAKE (§30.G uporabniška imena akcij — ne tehniški izrazi; 6-jezično)
 // ---------------------------------------------------------------------------
 
 export const RECOVERY_ACTION_LABELS: Record<
   RecoverySuggestionAction,
-  { sl: string; en: string }
+  GoStrings
 > = {
-  CONTINUE: { sl: "Nadaljuj", en: "Continue" },
-  SKIP: { sl: "Preskoči", en: "Skip" },
-  ADJUST_PLAN: { sl: "Preuredi mojo pot", en: "Rearrange my trip" },
-  VIEW_BOOKING: { sl: "Odpri rezervacijo", en: "Open booking" },
+  CONTINUE: {
+    sl: "Nadaljuj",
+    en: "Continue",
+    it: "Continua",
+    de: "Weiter",
+    fr: "Continuer",
+    es: "Continuar",
+  },
+  SKIP: {
+    sl: "Preskoči",
+    en: "Skip",
+    it: "Salta",
+    de: "Überspringen",
+    fr: "Passer",
+    es: "Omitir",
+  },
+  ADJUST_PLAN: {
+    sl: "Preuredi mojo pot",
+    en: "Rearrange my trip",
+    it: "Riorganizza il mio viaggio",
+    de: "Meine Reise umplanen",
+    fr: "Réorganiser mon voyage",
+    es: "Reorganizar mi viaje",
+  },
+  VIEW_BOOKING: {
+    sl: "Odpri rezervacijo",
+    en: "Open booking",
+    it: "Apri la prenotazione",
+    de: "Buchung öffnen",
+    fr: "Ouvrir la réservation",
+    es: "Abrir la reserva",
+  },
 } as const;
 
 export const RECOVERY_LABELS = {
-  affected: { sl: "Prizadeto", en: "Affected" },
-  stillValid: { sl: "Še velja", en: "Still valid" },
-  atRisk: { sl: "Ogroženo", en: "At risk" },
-  nextViable: { sl: "Naslednji izvedljivi cilj", en: "Next feasible stop" },
+  affected: {
+    sl: "Prizadeto",
+    en: "Affected",
+    it: "Interessato",
+    de: "Betroffen",
+    fr: "Touché",
+    es: "Afectado",
+  },
+  stillValid: {
+    sl: "Še velja",
+    en: "Still valid",
+    it: "Ancora valido",
+    de: "Weiterhin gültig",
+    fr: "Toujours valable",
+    es: "Todavía válido",
+  },
+  atRisk: {
+    sl: "Ogroženo",
+    en: "At risk",
+    it: "A rischio",
+    de: "Gefährdet",
+    fr: "Menacé",
+    es: "En riesgo",
+  },
+  nextViable: {
+    sl: "Naslednji izvedljivi cilj",
+    en: "Next feasible stop",
+    it: "Prossima tappa fattibile",
+    de: "Nächste machbare Station",
+    fr: "Prochain arrêt faisable",
+    es: "Próxima parada viable",
+  },
   yourCall: {
     sl: "Odločiš ti — Discover ne spreminja rezervacij namesto tebe.",
     en: "Your call — Discover does not change bookings on your behalf.",
+    it: "Decidi tu — Discover non modifica le prenotazioni al posto tuo.",
+    de: "Deine Entscheidung — Discover ändert keine Buchungen an deiner Stelle.",
+    fr: "C'est à toi de décider — Discover ne modifie pas les réservations à ta place.",
+    es: "Tú decides — Discover no cambia las reservas en tu nombre.",
   },
 } as const;

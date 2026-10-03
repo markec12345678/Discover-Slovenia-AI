@@ -132,7 +132,7 @@ export function isNavigableGeo(geo: StopGeo): boolean {
 }
 
 // ---------------------------------------------------------------------------
-// UI OZNAKE (dvojezične — L vzorec, ISKRENE)
+// UI OZNAKE (6-jezične — ISSUE #24 Sklop 8 faza 2, ISKRENE)
 // ---------------------------------------------------------------------------
 
 export const STOP_GEO_LABELS = {
@@ -140,20 +140,36 @@ export const STOP_GEO_LABELS = {
   exact: {
     sl: "Preverjena lokacija",
     en: "Verified location",
+    it: "Posizione verificata",
+    de: "Überprüfter Standort",
+    fr: "Emplacement vérifié",
+    es: "Ubicación verificada",
   },
   /** Približna lokacija — vir poimenovan (uporabnik ve, čemur zaupa). */
   approximate: {
     sl: (source: string) => `Približna lokacija (vir: ${source})`,
     en: (source: string) => `Approximate location (source: ${source})`,
+    it: (source: string) => `Posizione approssimativa (fonte: ${source})`,
+    de: (source: string) => `Ungefährer Standort (Quelle: ${source})`,
+    fr: (source: string) => `Emplacement approximatif (source\u00a0: ${source})`,
+    es: (source: string) => `Ubicación aproximada (fuente: ${source})`,
   },
   /** Vir lokacije ni podal — navigacija NI na voljo (§18 vrstica 7). */
   missing: {
     sl: "Lokacija ni znana — navigacija ni na voljo",
     en: "Location unknown — navigation unavailable",
+    it: "Posizione sconosciuta — navigazione non disponibile",
+    de: "Standort unbekannt — Navigation nicht verfügbar",
+    fr: "Emplacement inconnu — navigation indisponible",
+    es: "Ubicación desconocida — navegación no disponible",
   },
   /** Vir je podal napačne koordinate — iskreno DRUGAČNO od „ni znana“ (§18-8). */
   invalid: {
     sl: "Lokacijski podatki vira so napačni — navigacija ni na voljo",
     en: "Source location data is invalid — navigation unavailable",
+    it: "I dati di posizione della fonte non sono validi — navigazione non disponibile",
+    de: "Die Standortdaten der Quelle sind ungültig — Navigation nicht verfügbar",
+    fr: "Les données d'emplacement de la source sont invalides — navigation indisponible",
+    es: "Los datos de ubicación de la fuente no son válidos — navegación no disponible",
   },
 } as const;

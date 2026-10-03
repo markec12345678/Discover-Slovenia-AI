@@ -16,6 +16,8 @@
 
 import type { GoView } from "./go-view";
 import type { GuardianConflict } from "./conflict-detect";
+// ISSUE #24 Sklop 8 (1.170.0): 6-jezične oznake (faza 2 — polni prevodi).
+import type { GoStrings } from "./go-lang";
 
 // ---------------------------------------------------------------------------
 // TIPI
@@ -26,7 +28,7 @@ export interface DayStartSummary {
   /** Ali je jutranji povzetek sploh primeren (dan se še ni začel / nič opravljenega). */
   applicable: boolean;
   /** Zakaj NI primeren (samo kadar applicable === false — iskreno). */
-  notApplicableReason?: { sl: string; en: string };
+  notApplicableReason?: GoStrings;
   /** Skupno število postankov dneva (odprti + opravljeni + preskočeni). */
   stopCount: number;
   /** Število fiksnih terminov (time.start) med ODPRTIMI postanki. */
@@ -105,6 +107,10 @@ export function buildDayStartSummary(input: DayStartInput): DayStartSummary {
           notApplicableReason: {
             sl: "Dan se je že začel ali ni današnji — jutranji povzetek ni primeren.",
             en: "The day has already started or is not today — the morning summary does not apply.",
+            it: "La giornata è già iniziata o non è oggi — il riepilogo mattutino non si applica.",
+            de: "Der Tag hat bereits begonnen oder ist nicht heute — die Morgenübersicht trifft nicht zu.",
+            fr: "La journée a déjà commencé ou n'est pas aujourd'hui — le résumé du matin ne s'applique pas.",
+            es: "El día ya ha empezado o no es hoy — el resumen matutino no se aplica.",
           },
         }),
     stopCount: allCount,
@@ -136,11 +142,18 @@ export function buildDayStartSummary(input: DayStartInput): DayStartSummary {
 }
 
 // ---------------------------------------------------------------------------
-// UI OZNAKE (§13 primer + §30 uporabniška imena)
+// UI OZNAKE (§13 primer + §30 uporabniška imena; 6-jezično — Sklop 8 faza 2)
 // ---------------------------------------------------------------------------
 
 export const DAY_START_LABELS = {
-  title: { sl: "ZAČNI DAN", en: "START THE DAY" },
+  title: {
+    sl: "ZAČNI DAN",
+    en: "START THE DAY",
+    it: "INIZIA LA GIORNATA",
+    de: "TAG BEGINNEN",
+    fr: "COMMENCER LA JOURNÉE",
+    es: "EMPEZAR EL DÍA",
+  },
   greeting: {
     /** (stops, bookings) → pozdrav z dejanskimi številkami. */
     sl: (stops: number, bookings: number) =>
@@ -153,16 +166,47 @@ export const DAY_START_LABELS = {
       `Today you have ${stops} ${stops === 1 ? "stop" : "stops"}${
         bookings > 0 ? ` · ${bookings} ${bookings === 1 ? "booking" : "bookings"}` : ""
       }.`,
+    it: (stops: number, bookings: number) =>
+      `Oggi hai ${stops} ${stops === 1 ? "tappa" : "tappe"}${
+        bookings > 0 ? ` · ${bookings} ${bookings === 1 ? "prenotazione" : "prenotazioni"}` : ""
+      }.`,
+    de: (stops: number, bookings: number) =>
+      `Heute hast du ${stops} ${stops === 1 ? "Station" : "Stationen"}${
+        bookings > 0 ? ` · ${bookings} ${bookings === 1 ? "Buchung" : "Buchungen"}` : ""
+      }.`,
+    fr: (stops: number, bookings: number) =>
+      `Aujourd'hui tu as ${stops} ${stops === 1 ? "arrêt" : "arrêts"}${
+        bookings > 0 ? ` · ${bookings} ${bookings === 1 ? "réservation" : "réservations"}` : ""
+      }.`,
+    es: (stops: number, bookings: number) =>
+      `Hoy tienes ${stops} ${stops === 1 ? "parada" : "paradas"}${
+        bookings > 0 ? ` · ${bookings} ${bookings === 1 ? "reserva" : "reservas"}` : ""
+      }.`,
   },
   firstGoal: {
     sl: (title: string) => `Prvi cilj: ${title}`,
     en: (title: string) => `First stop: ${title}`,
+    it: (title: string) => `Prima tappa: ${title}`,
+    de: (title: string) => `Erste Station: ${title}`,
+    fr: (title: string) => `Premier arrêt : ${title}`,
+    es: (title: string) => `Primera parada: ${title}`,
   },
   route: {
     sl: (km: number, min: number) => `Znana pot: ~${km} km · ~${min} min.`,
     en: (km: number, min: number) => `Known route: ~${km} km · ~${min} min.`,
+    it: (km: number, min: number) => `Percorso noto: ~${km} km · ~${min} min.`,
+    de: (km: number, min: number) => `Bekannte Route: ~${km} km · ~${min} Min.`,
+    fr: (km: number, min: number) => `Itinéraire connu : ~${km} km · ~${min} min.`,
+    es: (km: number, min: number) => `Ruta conocida: ~${km} km · ~${min} min.`,
   },
-  warnings: { sl: "Opozorila za danes", en: "Warnings for today" },
+  warnings: {
+    sl: "Opozorila za danes",
+    en: "Warnings for today",
+    it: "Avvisi per oggi",
+    de: "Warnungen für heute",
+    fr: "Avertissements pour aujourd'hui",
+    es: "Avisos para hoy",
+  },
   missing: {
     sl: (noGeo: number, noTime: number) => {
       const parts: string[] = [];
@@ -176,9 +220,37 @@ export const DAY_START_LABELS = {
       if (noTime > 0) parts.push(`${noTime} without published times`);
       return parts.length > 0 ? `Missing: ${parts.join(" · ")}.` : "";
     },
+    it: (noGeo: number, noTime: number) => {
+      const parts: string[] = [];
+      if (noGeo > 0) parts.push(`${noGeo} senza posizione nota`);
+      if (noTime > 0) parts.push(`${noTime} senza orari pubblicati`);
+      return parts.length > 0 ? `Mancano: ${parts.join(" · ")}.` : "";
+    },
+    de: (noGeo: number, noTime: number) => {
+      const parts: string[] = [];
+      if (noGeo > 0) parts.push(`${noGeo} ohne bekannten Standort`);
+      if (noTime > 0) parts.push(`${noTime} ohne veröffentlichte Zeiten`);
+      return parts.length > 0 ? `Fehlt: ${parts.join(" · ")}.` : "";
+    },
+    fr: (noGeo: number, noTime: number) => {
+      const parts: string[] = [];
+      if (noGeo > 0) parts.push(`${noGeo} sans emplacement connu`);
+      if (noTime > 0) parts.push(`${noTime} sans horaires publiés`);
+      return parts.length > 0 ? `Manquent : ${parts.join(" · ")}.` : "";
+    },
+    es: (noGeo: number, noTime: number) => {
+      const parts: string[] = [];
+      if (noGeo > 0) parts.push(`${noGeo} sin ubicación conocida`);
+      if (noTime > 0) parts.push(`${noTime} sin horarios publicados`);
+      return parts.length > 0 ? `Falta: ${parts.join(" · ")}.` : "";
+    },
   },
   gpsHint: {
     sl: "GPS bo med potjo pokazal tvojo lokacijo, naslednji cilj in navigacijo.",
     en: "During the trip GPS will show your location, the next stop and navigation.",
+    it: "Durante il viaggio il GPS mostrerà la tua posizione, la prossima tappa e la navigazione.",
+    de: "Während der Reise zeigt dir das GPS deinen Standort, die nächste Station und die Navigation.",
+    fr: "Pendant le voyage, le GPS affichera ta position, le prochain arrêt et la navigation.",
+    es: "Durante el viaje, el GPS mostrará tu ubicación, la próxima parada y la navegación.",
   },
 } as const;

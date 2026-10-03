@@ -225,7 +225,15 @@ describe("ISSUE #22 E: go-mode.tsx — source contract", () => {
     expect(src).toContain("addNearbyStopToRecord(");
     expect(src).toContain("saveItineraryGoTrip(updated.view");
     // v1: feedback sporočilo (kanonična pot — ne moremo dodati).
-    expect(src).toContain("dodajanje med potjo ni mogoče");
+    // Sklop 8 (1.170.0): en vir resnice GO_EDIT_LABELS.notPossibleV1
+    // (prej inline dvojnik v go-mode; besedilo živi v go-edit.ts).
+    expect(src).toContain("GO_EDIT_LABELS.notPossibleV1");
+    expect(
+      readFileSync(
+        join(import.meta.dir, "../journey/go-edit.ts"),
+        "utf8"
+      )
+    ).toContain("dodajanje med potjo ni mogoče");
   });
 
   test("⑦ ZERO FEATURE LOSS: obstoječe sekcije ostajajo (shema dneva, vreme, avdio, preskok)", () => {

@@ -31,6 +31,8 @@ import { openingStatusAt, type OpeningMoment } from "@/lib/opening-hours";
 import type { ProductType } from "@/lib/supply/types";
 import type { GoView } from "./go-view";
 import { hhmmToMinutes, type DataQuality } from "./time-reserve";
+// ISSUE #24 Sklop 8 (1.170.0): 6-jezične oznake (faza 2 — polni prevodi).
+import type { GoStrings } from "./go-lang";
 
 // ---------------------------------------------------------------------------
 // TIP — OKNO
@@ -137,12 +139,40 @@ export const CATEGORY_TO_PRODUCT_TYPES: Record<
 
 export const NEARBY_CATEGORY_LABELS: Record<
   GuardianNearbyCategory,
-  { sl: string; en: string }
+  GoStrings
 > = {
-  sight: { sl: "Znamenitosti", en: "Sights" },
-  food: { sl: "Hrana", en: "Food" },
-  drink: { sl: "Kava", en: "Coffee" },
-  walk: { sl: "Sprehod", en: "Walk" },
+  sight: {
+    sl: "Znamenitosti",
+    en: "Sights",
+    it: "Attrazioni",
+    de: "Sehenswürdigkeiten",
+    fr: "Sites à visiter",
+    es: "Lugares de interés",
+  },
+  food: {
+    sl: "Hrana",
+    en: "Food",
+    it: "Cibo",
+    de: "Essen",
+    fr: "Restauration",
+    es: "Comida",
+  },
+  drink: {
+    sl: "Kava",
+    en: "Coffee",
+    it: "Caffè",
+    de: "Kaffee",
+    fr: "Café",
+    es: "Café",
+  },
+  walk: {
+    sl: "Sprehod",
+    en: "Walk",
+    it: "Passeggiata",
+    de: "Spaziergang",
+    fr: "Balade",
+    es: "Paseo",
+  },
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -326,43 +356,100 @@ export function nearbyBbox(
 }
 
 // ---------------------------------------------------------------------------
-// UI OZNAKE (§30.F uporabniška imena)
+// UI OZNAKE (§30.F uporabniška imena; 6-jezično — Sklop 8 faza 2)
 // ---------------------------------------------------------------------------
 
 export const FREE_TIME_LABELS = {
-  title: { sl: "PROST ČAS", en: "FREE TIME" },
+  title: {
+    sl: "PROST ČAS",
+    en: "FREE TIME",
+    it: "TEMPO LIBERO",
+    de: "FREIE ZEIT",
+    fr: "TEMPS LIBRE",
+    es: "TIEMPO LIBRE",
+  },
   headline: {
     sl: (min: number) => `Imaš približno ${min} min prostega časa`,
     en: (min: number) => `You have about ${min} minutes to spare`,
+    it: (min: number) => `Hai circa ${min} minuti liberi`,
+    de: (min: number) => `Du hast etwa ${min} Minuten frei`,
+    fr: (min: number) => `Tu as environ ${min} minutes de libre`,
+    es: (min: number) => `Tienes unos ${min} minutos libres`,
   },
-  question: { sl: "Kaj lahko narediš v bližini?", en: "What can you do nearby?" },
+  question: {
+    sl: "Kaj lahko narediš v bližini?",
+    en: "What can you do nearby?",
+    it: "Cosa puoi fare qui vicino?",
+    de: "Was kannst du in der Nähe unternehmen?",
+    fr: "Que peux-tu faire à proximité ?",
+    es: "¿Qué puedes hacer cerca?",
+  },
   until: {
     sl: (hhmm: string) => `do naslednje rezervacije ob ${hhmm}`,
     en: (hhmm: string) => `until the next booking at ${hhmm}`,
+    it: (hhmm: string) => `fino alla prossima prenotazione alle ${hhmm}`,
+    de: (hhmm: string) => `bis zur nächsten Buchung um ${hhmm} Uhr`,
+    fr: (hhmm: string) => `jusqu'à la prochaine réservation à ${hhmm}`,
+    es: (hhmm: string) => `hasta la próxima reserva a las ${hhmm}`,
   },
   safety: {
     sl: (min: number) =>
       `Prihranili smo ${min} min varnostne rezerve — predlogi ti ne bodo povzročili zamude.`,
     en: (min: number) =>
       `We kept a ${min} min safety reserve — none of these suggestions will make you late.`,
+    it: (min: number) =>
+      `Abbiamo tenuto ${min} min di riserva di sicurezza — nessuno di questi suggerimenti ti farà arrivare in ritardo.`,
+    de: (min: number) =>
+      `Wir haben ${min} Min. Sicherheitsreserve eingeplant — keiner dieser Vorschläge macht dich zu spät.`,
+    fr: (min: number) =>
+      `Nous avons gardé ${min} min de réserve de sécurité — aucune de ces suggestions ne te mettra en retard.`,
+    es: (min: number) =>
+      `Hemos reservado ${min} min de margen de seguridad — ninguna de estas sugerencias te hará llegar tarde.`,
   },
   fitLine: {
     sl: (o: { drive: number; visit: number; back: number }) =>
       `${o.drive} min tja · ${o.visit} min obiska${o.back > 0 ? ` · ${o.back} min do termina` : ""}`,
     en: (o: { drive: number; visit: number; back: number }) =>
       `${o.drive} min there · ${o.visit} min visit${o.back > 0 ? ` · ${o.back} min to the booking` : ""}`,
+    it: (o: { drive: number; visit: number; back: number }) =>
+      `${o.drive} min per arrivare · ${o.visit} min di visita${o.back > 0 ? ` · ${o.back} min fino alla prenotazione` : ""}`,
+    de: (o: { drive: number; visit: number; back: number }) =>
+      `${o.drive} Min. hin · ${o.visit} Min. Besuch${o.back > 0 ? ` · ${o.back} Min. zur Buchung` : ""}`,
+    fr: (o: { drive: number; visit: number; back: number }) =>
+      `${o.drive} min pour y aller · ${o.visit} min de visite${o.back > 0 ? ` · ${o.back} min jusqu'à la réservation` : ""}`,
+    es: (o: { drive: number; visit: number; back: number }) =>
+      `${o.drive} min de ida · ${o.visit} min de visita${o.back > 0 ? ` · ${o.back} min hasta la reserva` : ""}`,
   },
-  openNow: { sl: "odprto ob prihodu", en: "open on arrival" },
+  openNow: {
+    sl: "odprto ob prihodu",
+    en: "open on arrival",
+    it: "aperto all'arrivo",
+    de: "bei Ankunft geöffnet",
+    fr: "ouvert à l'arrivée",
+    es: "abierto a la llegada",
+  },
   closedUnknown: {
     sl: "odpiralni čas neznan — preveri pred obiskom",
     en: "opening hours unknown — check before visiting",
+    it: "orari di apertura sconosciuti — verifica prima di andare",
+    de: "Öffnungszeiten unbekannt — vor dem Besuch prüfen",
+    fr: "horaires d'ouverture inconnus — vérifie avant d'y aller",
+    es: "horario desconocido — verifica antes de ir",
   },
   empty: {
     sl: "V bližini ni ničesar, kar bi se še spravilo v tvoje okno.",
     en: "Nothing nearby fits your window in time.",
+    it: "Niente qui vicino riesce a rientrare nella tua finestra di tempo.",
+    de: "Nichts in der Nähe passt rechtzeitig in dein Zeitfenster.",
+    fr: "Rien à proximité ne rentre dans ton créneau à temps.",
+    es: "Nada cerca llega a caber en tu ventana de tiempo.",
   },
   unavailable: {
     sl: "Predlogi v bližini potrebujejo povezavo — načrt in časovnica delujejo tudi brez nje.",
     en: "Nearby suggestions need a connection — the plan and timeline work without it too.",
+    it: "I suggerimenti nelle vicinanze richiedono una connessione — il piano e la sequenza funzionano anche senza.",
+    de: "Vorschläge in der Nähe brauchen eine Verbindung — Plan und Zeitplan funktionieren auch ohne.",
+    fr: "Les suggestions à proximité nécessitent une connexion — le plan et le déroulé fonctionnent aussi sans.",
+    es: "Las sugerencias cercanas necesitan conexión — el plan y el cronograma también funcionan sin ella.",
   },
 } as const;

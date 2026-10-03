@@ -27,13 +27,15 @@ import {
   buildDayMapUrl,
   type GoDayLineItem,
 } from "@/lib/journey/day-line";
+// ISSUE #24 Sklop 8 (1.170.0): 6-jezični izpis (faza 2).
+import { GL, GFn, type GoLang, type GoStrings } from "@/lib/journey/go-lang";
 
 /** Vrstni red postankov dneva (+ geo v elementih) + živi GPS (opcijsko). */
 export interface GoDayLineProps {
   line: GoDayLineItem[];
   /** Živi GPS (izhodišče poti v zemljevidu) — opcijsko, iskreno. */
   origin?: { lat: number; lng: number } | null;
-  lang: "sl" | "en";
+  lang: GoLang;
 }
 
 /** Barvno-znakovni slovar stanj (iskreni prikaz, ne okras). */
@@ -73,7 +75,7 @@ const STATE_STYLE: Record<
   },
 };
 
-const t = (o: { sl: string; en: string }, lang: "sl" | "en") => o[lang];
+const t = (o: GoStrings, lang: GoLang) => GL(lang, o);
 
 /**
  * Shema dneva + gumb za zunanji zemljevid. Prazna linija → NE rendra
@@ -175,11 +177,11 @@ export function GoDayLine({ line, origin, lang }: GoDayLineProps) {
             title={t(DAY_MAP_LABELS.external, lang)}
           >
             <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-            {DAY_MAP_LABELS.open[lang](validStops.length)}
+            {GFn(lang, DAY_MAP_LABELS.open)(validStops.length)}
           </a>
           {capped && (
             <p className="mt-1 text-[10px] text-muted-foreground">
-              {DAY_MAP_LABELS.cappedHint[lang](DAY_MAP_MAX_STOPS)}
+              {GFn(lang, DAY_MAP_LABELS.cappedHint)(DAY_MAP_MAX_STOPS)}
             </p>
           )}
         </div>

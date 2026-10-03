@@ -90,17 +90,23 @@ describe("S7 A) routing: Go Mode odprt za vseh 6 jezikov", () => {
 // ---------------------------------------------------------------------------
 
 describe("S7 B) SL-first jezikovna resolucija (source contract)", () => {
-  test("④ na-poti/page.tsx: 2× SL-first (metadata + stran), 0× stara EN-first", () => {
+  // SKLOP 8 FAZA 2 (1.170.0): resolucija je bila nadgrajena s SL-first
+  // (faza 1: vsi tuji → EN) na goLangOf (faza 2: vsi 6 jezikov ŽIVIJO —
+  // polni prevodi; neprevedena enota deduje EN prek GL, nikoli SL).
+  // Ta pogodba varuje, da se stara EN-first / SL-first fallback ne vrne.
+  test("④ na-poti/page.tsx: goLangOf resolucija ×2 (metadata + stran), 0× stara", () => {
     const page = source(GO_MODE_PAGE);
-    const flips = page.split('locale === "sl" ? "sl" : "en"').length - 1;
+    const flips = page.split("goLangOf(locale)").length - 1;
     expect(flips).toBe(2);
-    // Stara EN-first resolucija bi it/de/fr/es pahnila v SL (P4-8).
+    // Stara resoluciji bi it/de/fr/es pahnili v napačen jezik (P4-8).
+    expect(page).not.toContain('locale === "sl" ? "sl" : "en"');
     expect(page).not.toContain('locale === "en" ? "en" : "sl"');
   });
 
-  test("⑤ go-mode.tsx: SL-first resolucija (single source celega Go drevesa)", () => {
+  test("⑤ go-mode.tsx: goLangOf resolucija (single source celega Go drevesa)", () => {
     const gm = source(GO_MODE);
-    expect(gm).toContain('const lang: "sl" | "en" = locale === "sl" ? "sl" : "en"');
+    expect(gm).toContain("const lang: GoLang = goLangOf(locale)");
+    expect(gm).not.toContain('locale === "sl" ? "sl" : "en"');
     expect(gm).not.toContain('locale === "en" ? "en" : "sl"');
   });
 

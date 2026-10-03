@@ -21,9 +21,11 @@ import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { trackPlannerEvent } from "@/lib/planner-analytics";
+// ISSUE #24 Sklop 8 (1.170.0): 6-jezična besedila (faza 2).
+import { GL, GFn, type GoLang } from "@/lib/journey/go-lang";
 
 export interface TripCompleteProps {
-  lang: "sl" | "en";
+  lang: GoLang;
   /** Skupno število dni poti. */
   days: number;
   /** Opravljeni postanki CELE poti (vsota vseh dni). */
@@ -35,10 +37,21 @@ export interface TripCompleteProps {
 }
 
 const L = {
-  title: { sl: "POT ZAKLJUČENA", en: "TRIP COMPLETE" } as const,
+  title: {
+    sl: "POT ZAKLJUČENA",
+    en: "TRIP COMPLETE",
+    it: "VIAGGIO COMPLETATO",
+    de: "REISE ABGESCHLOSSEN",
+    fr: "VOYAGE TERMINÉ",
+    es: "VIAJE COMPLETADO",
+  } as const,
   heading: {
     sl: "Vsi postanki so opravljeni — čestitamo! 🎉",
     en: "All stops are done — congratulations! 🎉",
+    it: "Tutte le tappe sono completate — complimenti! 🎉",
+    de: "Alle Stationen sind erledigt — Glückwunsch! 🎉",
+    fr: "Tous les arrêts sont terminés — félicitations ! 🎉",
+    es: "Todas las paradas están completadas — ¡enhorabuena! 🎉",
   } as const,
   stats: {
     sl: (d: number, done: number, skipped: number) =>
@@ -49,14 +62,55 @@ const L = {
       `${d} ${d === 1 ? "day" : "days"} · ${done} completed${
         skipped > 0 ? ` · ${skipped} skipped` : ""
       }`,
+    it: (d: number, done: number, skipped: number) =>
+      `${d} ${d === 1 ? "giorno" : "giorni"} · ${done} completate${
+        skipped > 0 ? ` · ${skipped} saltate` : ""
+      }`,
+    de: (d: number, done: number, skipped: number) =>
+      `${d} ${d === 1 ? "Tag" : "Tage"} · ${done} erledigt${
+        skipped > 0 ? ` · ${skipped} übersprungen` : ""
+      }`,
+    fr: (d: number, done: number, skipped: number) =>
+      `${d} ${d === 1 ? "jour" : "jours"} · ${done} terminés${
+        skipped > 0 ? ` · ${skipped} passés` : ""
+      }`,
+    es: (d: number, done: number, skipped: number) =>
+      `${d} ${d === 1 ? "día" : "días"} · ${done} completadas${
+        skipped > 0 ? ` · ${skipped} omitidas` : ""
+      }`,
   } as const,
   next: {
     sl: "Kaj zdaj? Poglej svojo pot, jo deli s prijatelji ali načrtuj novo.",
     en: "What now? Review your trip, share it with friends or plan a new one.",
+    it: "E adesso? Rivedi il tuo viaggio, condividilo con gli amici o pianifica il prossimo.",
+    de: "Was nun? Sieh dir deine Reise an, teile sie mit Freunden oder plane eine neue.",
+    fr: "Et maintenant ? Revois ton voyage, partage-le avec tes amis ou planifie-en un nouveau.",
+    es: "¿Y ahora? Repasa tu viaje, compártelo con amigos o planifica uno nuevo.",
   } as const,
-  openTrip: { sl: "Odpri shranjeno pot", en: "Open saved trip" } as const,
-  myTravels: { sl: "Moja potovanja", en: "My travels" } as const,
-  newTrip: { sl: "Načrtuj novo pot", en: "Plan a new trip" } as const,
+  openTrip: {
+    sl: "Odpri shranjeno pot",
+    en: "Open saved trip",
+    it: "Apri il viaggio salvato",
+    de: "Gespeicherte Reise öffnen",
+    fr: "Ouvrir le voyage enregistré",
+    es: "Abrir el viaje guardado",
+  } as const,
+  myTravels: {
+    sl: "Moja potovanja",
+    en: "My travels",
+    it: "I miei viaggi",
+    de: "Meine Reisen",
+    fr: "Mes voyages",
+    es: "Mis viajes",
+  } as const,
+  newTrip: {
+    sl: "Načrtuj novo pot",
+    en: "Plan a new trip",
+    it: "Pianifica un nuovo viaggio",
+    de: "Eine neue Reise planen",
+    fr: "Planifier un nouveau voyage",
+    es: "Planificar un nuevo viaje",
+  } as const,
 } as const;
 
 export function TripComplete({
@@ -66,7 +120,8 @@ export function TripComplete({
   skippedTotal,
   savedTripHref,
 }: TripCompleteProps) {
-  const t = (o: { sl: string; en: string }) => o[lang];
+  const t = (o: { sl: string; en: string; it?: string; de?: string; fr?: string; es?: string }) =>
+    GL(lang, o);
 
   return (
     <Card
@@ -87,9 +142,7 @@ export function TripComplete({
             </p>
             <p className="text-sm font-medium leading-relaxed">{t(L.heading)}</p>
             <p className="text-sm text-muted-foreground">
-              {lang === "sl"
-                ? L.stats.sl(days, doneTotal, skippedTotal)
-                : L.stats.en(days, doneTotal, skippedTotal)}
+              {GFn(lang, L.stats)(days, doneTotal, skippedTotal)}
             </p>
           </div>
         </div>

@@ -141,7 +141,8 @@ describe("ISSUE #23 UX — Go Mode", () => {
 
   test("⑬ TripComplete a11y + L-canon (sl/en — iskrena meja /na-poti) + analitika", () => {
     expect(TRIP_COMPLETE).toContain('role="status"');
-    expect(TRIP_COMPLETE).toContain('lang: "sl" | "en"');
+    // Sklop 8 (1.170.0): 6-jezični GoLang (prej "sl" | "en").
+    expect(TRIP_COMPLETE).toContain('lang: GoLang;');
     expect(TRIP_COMPLETE).toContain('state: "COMPLETED"');
     expect(TRIP_COMPLETE).toMatch(/h-11/);
   });

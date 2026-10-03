@@ -27,6 +27,7 @@ import { Eye, EyeOff, Square, Volume2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { GO_AUDIO_LABELS } from "@/lib/journey/go-audio";
+import type { GoLang } from "@/lib/journey/go-lang";
 import { chunkNarration } from "@/lib/itinerary-audio";
 import { speechLanguageTag, ttsSupported } from "@/lib/voice";
 import { trackPlannerEvent } from "@/lib/planner-analytics";
@@ -35,7 +36,8 @@ export interface GoAudioButtonProps {
   /** Pripoved za izgovor (buildStopNarration / buildNearbyNarration) —
    *  null → gumba NI (fail-closed, iskrena odsotnost). */
   script: string | null;
-  lang: "sl" | "en";
+  /** Sklop 8 (1.170.0): 6 jezikov — TTS glas izbere speechLanguageTag. */
+  lang: GoLang;
   /** "stop" (kartica postanka) | "nearby" (GPS kartica). */
   kind: "stop" | "nearby";
   /** Naslov postanka (za ARIA + telemetrijo; nearby ga ne rabi). */

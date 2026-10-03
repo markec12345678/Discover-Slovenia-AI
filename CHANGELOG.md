@@ -7,6 +7,70 @@ in projekt sledi [Semantic Versioning](https://semver.org/lang/sl/).
 
 ---
 
+## [1.170.0] — 2026-10-02 (#24 Sklop 8: Go Mode i18n — FAZA 2, polni prevodi IT/DE/FR/ES)
+
+### Dodano
+
+- **GO MODE v ITALIJANŠČINI, NEMŠČINI, FRANCOŠČINI in ŠPANŠČINI — faza 2
+  (polni prevodi) nad fazo 1 (1.169.0, EN-dedovanje)**: ~330 UI enot celotne
+  Go Mode površine je prejetih v vse 4 tuje jezike (it/de/fr/es) — italijanski,
+  nemški, francoski in španski uporabnik zdaj dobi SVOJ jezik na
+  /{locale}/na-poti: hero strani + meta naslov/opis, živa ura/datum (lokalne
+  oblike IT/DE/FR/ES), GPS nadzor (vklop/izklop/statusi/natančnost),
+  NASLEDNJE kartica (ETA, prihod, žetoni), vreme pri naslednji postanki,
+  navigacijski handoff (zunanja aplikacija), odpiralni časi
+  (OPEN/CLOSED/UNKNOWN + dnevi + »zaprto · odpre pon 08:00«), Travel
+  Guardian (stanje dneva, konflikti FACTS→REASON→IMPACT, recovery, jutranji
+  povzetek ZAČNI DAN, pametni prosti čas s kategorijami), shema dneva,
+  zemljevid dneva, POT ZAKLJUČENA, Glasovni vodik (TTS pripovedi postankov
+  in »kaj je v bližini« v jeziku uporabnika — števila za tuje glasove
+  nativno izgovorjene; SL ostaja v besedah po TTS izmeri).
+- **Nov helper `src/lib/journey/go-lang.ts`** (kanon po vzorcu planner-lang
+  `PL()` / i18n-pick `pick()`): `GL(lang, strings)` z EN-dedovanjem
+  (manjkajoč tuji prevod → EN, NIKOLI SL za tuje uporabnike — P4-8),
+  `GFn` za funkcijske enote, `goAll` gradilec {sl,en,it,de,fr,es} objektov v
+  projekcijah, `goLangOf(locale)` resolucija (neznan jezik → SL izvirnik)
+  in `goLocaleTag` (BCP-47 za toLocaleTime/Date + TTS glas).
+- **Pregojeni 20 slovarjev** (go-view CARDINALS/GO_LABELS, travel-state,
+  time-reserve, resolve-stop-geo, go-weather, go-nav, go-audio
+  NARRATION_PACKS/GO_AUDIO_LABELS, trip-health, recovery, day-start,
+  free-time, conflict-detect vključno z inline dejstvi/razlogi/posledicami
+  10 vrst konfliktov, day-line, go-edit, booking CONFIRMATION_STATUS_LABELS,
+  opening-hours dnevi/statusi) + 10 komponent (go-mode, guardian ×4,
+  trip-complete, go-day-line, go-audio-button, OpeningHoursStatus,
+  na-poti stran).
+- **Popravek star SL-izm v EN**: `conflict-detect` je v EN stavek
+  »The known route (…)« vstavljal slovensko »ocena« — oznaka vira noge je
+  zdaj jezikovno zavedna (legOfLegSource(lang)).
+
+### Iskrene meje (dokumentirano)
+
+- **Podatkovni pari shranjenih Go zapisov ostanejo {sl,en}** (providerLabel,
+  dateLabel, statusLabel poti …): zapis na uporabnikovi napravi je jezikovno
+  nevtralen (0 migracij) — tuji uporabnik vidi/sliši EN stran para ( isti
+  kanon kot faza 1; naslovi postankov so uporabnikovi viri).
+- **offline.html** (nadomestna lupina brez povezave) ostaja SL+EN z
+  EN-dedovanjem za tuje (faza 1 kanon) — lastna naloga, če se kdaj izkaže
+  za pomembno.
+- Imena destinacij, POI-jev in ponudnikov so podatki virov (jezikovno
+  nevtralni lastni nazivi).
+
+### Testi
+
+- NOV `issue24-s8-gomode-translations.test.ts` (27 testov): helper kanon
+  (GL/GFn/goAll dedovanje), STRUKTURNA POPOLNOST (walker — vsak list ključnih
+  slovarjev nosi vse 4 tuje prevode; anti »tiho EN padlo«), P4-8 ne-mešanje,
+  kakovostni vzorci (countdown/navigate/konflikti/jutranji pozdrav/
+  odpiralni časi ×6), TTS pripovedi ×6 (uvodni stavek, termin v govoru,
+  PREMICA razkritje, providerLabel EN-dedovanje), source contracts resolucije
+  (goLangOf, GoLang tipi po komponentah, podatkovna nevtralnost zapisa),
+  iskrena meja offline.html.
+- Posodobljeni source-contract testi faze 1 (#21/#22/#23/S7 ④⑤): [lang]
+  indeksiranje → GFn/GL kanon, v1 feedback en vir (GO_EDIT_LABELS),
+  resolucija SL-first → goLangOf.
+- Regresija: 4971 pass + 1 znana sandbox DB (issue7-g11 ④ — CI z
+  Postgresom zelen); lint 0; tsc 0.
+
 ## [1.169.0] — 2026-10-02 (#24 Sklop 7: Go Mode i18n — odprt za vseh 6 jezikov, faza 1)
 
 ### Dodano

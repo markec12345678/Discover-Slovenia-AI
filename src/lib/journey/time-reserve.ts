@@ -32,6 +32,8 @@ import {
   type AccuracyClass,
 } from "./travel-state";
 import type { StopGeo } from "./resolve-stop-geo";
+// ISSUE #24 Sklop 8 (1.170.0): 6-jezični razlogi/oznake (faza 2).
+import type { GoStrings } from "./go-lang";
 
 // ---------------------------------------------------------------------------
 // TIPI
@@ -58,8 +60,8 @@ export interface EtaEstimate {
   km: number;
   /** Vedno ESTIMATED — prometa nimamo, OSRM od žive pozicije ni kanon. */
   quality: DataQuality;
-  /** Opomba kakovosti (bilingvalna) — samo kadar ni čista. */
-  note?: { sl: string; en: string };
+  /** Opomba kakovosti (6-jezična) — samo kadar ni čista. */
+  note?: GoStrings;
 }
 
 /** Rezultat izračuna rezerve za NASLEDNJI postanek. */
@@ -74,8 +76,8 @@ export interface TimeReserve {
   bookingStart?: string;
   /** Rezerva v minutah (start − ETA) — SAMO pri izračunljivi rezervi. */
   reserveMin?: number;
-  /** Zakaj rezerve NI (bilingvalno — vedno, kadar status UNKNOWN). */
-  reason?: { sl: string; en: string };
+  /** Zakaj rezerve NI (6-jezično — vedno, kadar status UNKNOWN). */
+  reason?: GoStrings;
   /** Kakovost vhodov (najšibkejši člen — iskrenost). */
   quality: DataQuality;
 }
@@ -157,17 +159,56 @@ export function bookingQualityOf(
 }
 
 /** Legenda kakovosti (§18 — verified in estimated NISTA enake vizualne teže). */
-export const QUALITY_LABELS: Record<DataQuality, { sl: string; en: string }> = {
-  VERIFIED: { sl: "preverjeno", en: "verified" },
-  ESTIMATED: { sl: "ocena", en: "estimated" },
-  UNKNOWN: { sl: "neznano", en: "unknown" },
-  STALE: { sl: "zastarelo", en: "stale" },
-  MISSING: { sl: "manjka", en: "missing" },
+export const QUALITY_LABELS: Record<DataQuality, GoStrings> = {
+  VERIFIED: {
+    sl: "preverjeno",
+    en: "verified",
+    it: "verificato",
+    de: "überprüft",
+    fr: "vérifié",
+    es: "verificado",
+  },
+  ESTIMATED: {
+    sl: "ocena",
+    en: "estimated",
+    it: "stimato",
+    de: "geschätzt",
+    fr: "estimé",
+    es: "estimado",
+  },
+  UNKNOWN: {
+    sl: "neznano",
+    en: "unknown",
+    it: "sconosciuto",
+    de: "unbekannt",
+    fr: "inconnu",
+    es: "desconocido",
+  },
+  STALE: {
+    sl: "zastarelo",
+    en: "stale",
+    it: "obsoleto",
+    de: "veraltet",
+    fr: "obsolète",
+    es: "obsoleto",
+  },
+  MISSING: {
+    sl: "manjka",
+    en: "missing",
+    it: "mancante",
+    de: "fehlt",
+    fr: "manquant",
+    es: "falta",
+  },
 } as const;
 
-const LOW_ACCURACY_NOTE = {
+const LOW_ACCURACY_NOTE: GoStrings = {
   sl: "natančnost fiksacije je nizka — ocena je groba",
   en: "position accuracy is low — the estimate is rough",
+  it: "la precisione della posizione è bassa — la stima è approssimativa",
+  de: "die Genauigkeit der Position ist niedrig — die Schätzung ist grob",
+  fr: "la précision de la position est faible — l'estimation est grossière",
+  es: "la precisión de la posición es baja — la estimación es aproximada",
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -223,6 +264,10 @@ export function evaluateTimeReserve(input: TimeReserveInput): TimeReserve {
       reason: {
         sl: "Postanek nima fiksnega termina — časovna rezerva ne obstaja.",
         en: "The stop has no fixed time — there is no time reserve.",
+        it: "La tappa non ha un orario fisso — non esiste una riserva di tempo.",
+        de: "Die Station hat keine feste Zeit — es gibt keine Zeitreserve.",
+        fr: "L'arrêt n'a pas d'horaire fixe — il n'y a pas de réserve de temps.",
+        es: "La parada no tiene hora fija — no existe reserva de tiempo.",
       },
       ...(eta != null ? { eta } : {}),
     };
@@ -239,6 +284,10 @@ export function evaluateTimeReserve(input: TimeReserveInput): TimeReserve {
       reason: {
         sl: "Zapis termina vira ni veljaven — rezerve ni mogoče izračunati.",
         en: "The source time entry is invalid — the reserve cannot be computed.",
+        it: "L'orario della fonte non è valido — la riserva non può essere calcolata.",
+        de: "Die Zeitangabe der Quelle ist ungültig — die Reserve kann nicht berechnet werden.",
+        fr: "L'horaire de la source est invalide — la réserve ne peut pas être calculée.",
+        es: "El horario de la fuente no es válido — la reserva no se puede calcular.",
       },
     };
   }
@@ -334,44 +383,88 @@ function etaOf(input: TimeReserveInput, cfg: ReserveConfig): EtaEstimate | null 
   };
 }
 
-/** Iskren razlog odsotnosti ETA (bilingvalen — za UNKNOWN izpis). */
+/** Iskren razlog odsotnosti ETA (6-jezičen — za UNKNOWN izpis). */
 function noEtaReason(
   input: TimeReserveInput,
   cfg: ReserveConfig
-): { sl: string; en: string } {
+): GoStrings {
   if (input.position == null) {
     return {
       sl: "Brez GPS lokacije predvidenega prihoda ni mogoče izračunati.",
       en: "Without a GPS position the estimated arrival cannot be computed.",
+      it: "Senza una posizione GPS l'arrivo previsto non può essere calcolato.",
+      de: "Ohne GPS-Position kann die voraussichtliche Ankunft nicht berechnet werden.",
+      fr: "Sans position GPS, l'arrivée estimée ne peut pas être calculée.",
+      es: "Sin posición GPS no se puede calcular la llegada estimada.",
     };
   }
   if (!isNavigable(input.geo)) {
     return {
       sl: "Lokacija postanka ni znana — predviden prihod ni mogoč.",
       en: "The stop's location is unknown — no estimated arrival is possible.",
+      it: "La posizione della tappa è sconosciuta — nessun arrivo previsto possibile.",
+      de: "Der Standort der Station ist unbekannt — keine voraussichtliche Ankunft möglich.",
+      fr: "L'emplacement de l'arrêt est inconnu — aucune arrivée estimée possible.",
+      es: "Se desconoce la ubicación de la parada — no es posible estimar la llegada.",
     };
   }
   if (isPositionStale(input.position.timestamp, input.now.getTime(), cfg.staleMs)) {
     return {
       sl: "Zadnja GPS fiksacija je zastarela — predvidenega prihoda ne izrekamo.",
       en: "The last GPS fix is stale — we do not state an estimated arrival.",
+      it: "L'ultima fissazione GPS è obsoleta — non indichiamo un arrivo previsto.",
+      de: "Die letzte GPS-Fixierung ist veraltet — wir geben keine voraussichtliche Ankunft an.",
+      fr: "Le dernier pointage GPS est obsolète — nous n'indiquons pas d'arrivée estimée.",
+      es: "La última fijación GPS está obsoleta — no indicamos una llegada estimada.",
     };
   }
   return {
     sl: "Podatkov ni dovolj za oceno prihoda.",
     en: "There is not enough data to estimate the arrival.",
+    it: "Non ci sono abbastanza dati per stimare l'arrivo.",
+    de: "Es gibt nicht genug Daten, um die Ankunft zu schätzen.",
+    fr: "Il n'y a pas assez de données pour estimer l'arrivée.",
+    es: "No hay datos suficientes para estimar la llegada.",
   };
 }
 
 // ---------------------------------------------------------------------------
-// UI OZNAKE (L vzorec — dvojezične, ISKRENE)
+// UI OZNAKE (6-jezične — ISSUE #24 Sklop 8 faza 2, ISKRENE)
 // ---------------------------------------------------------------------------
 
 export const RESERVE_LABELS = {
-  onTime: { sl: "Vse teče po načrtu", en: "Everything on schedule" },
-  tight: { sl: "Ozek, a izvedljiv prihod", en: "Tight but feasible arrival" },
-  late: { sl: "Zamujal bi", en: "You would be late" },
-  unknown: { sl: "Ni mogoče oceniti", en: "Cannot be estimated" },
+  onTime: {
+    sl: "Vse teče po načrtu",
+    en: "Everything on schedule",
+    it: "Tutto secondo i piani",
+    de: "Alles im Zeitplan",
+    fr: "Tout est conforme au programme",
+    es: "Todo según lo previsto",
+  },
+  tight: {
+    sl: "Ozek, a izvedljiv prihod",
+    en: "Tight but feasible arrival",
+    it: "Arrivo stretto ma fattibile",
+    de: "Knapper, aber machbarer Zeitplan",
+    fr: "Arrivée juste mais faisable",
+    es: "Llegada justa pero factible",
+  },
+  late: {
+    sl: "Zamujal bi",
+    en: "You would be late",
+    it: "Arriveresti in ritardo",
+    de: "Du wärst zu spät",
+    fr: "Tu serais en retard",
+    es: "Llegarías tarde",
+  },
+  unknown: {
+    sl: "Ni mogoče oceniti",
+    en: "Cannot be estimated",
+    it: "Non stimabile",
+    de: "Nicht schätzbar",
+    fr: "Impossible à estimer",
+    es: "No se puede estimar",
+  },
   /** Glavni izpis vrstice rezerve (samo z DEJANSKIMA številama). */
   line: {
     sl: (o: { start: string; eta: string; reserve: number }) =>
@@ -385,6 +478,30 @@ export const RESERVE_LABELS = {
         o.reserve >= 0
           ? `${o.reserve} min to spare.`
           : `${Math.abs(o.reserve)} min late.`
+      }`,
+    it: (o: { start: string; eta: string; reserve: number }) =>
+      `Prossima prenotazione alle ${o.start}. Arrivo previsto ~${o.eta}. ${
+        o.reserve >= 0
+          ? `${o.reserve} min di margine.`
+          : `${Math.abs(o.reserve)} min di ritardo.`
+      }`,
+    de: (o: { start: string; eta: string; reserve: number }) =>
+      `Nächste Buchung um ${o.start}. Voraussichtliche Ankunft ~${o.eta}. ${
+        o.reserve >= 0
+          ? `${o.reserve} Min. Puffer.`
+          : `${Math.abs(o.reserve)} Min. Verspätung.`
+      }`,
+    fr: (o: { start: string; eta: string; reserve: number }) =>
+      `Prochaine réservation à ${o.start}. Arrivée estimée ~${o.eta}. ${
+        o.reserve >= 0
+          ? `${o.reserve} min de marge.`
+          : `${Math.abs(o.reserve)} min de retard.`
+      }`,
+    es: (o: { start: string; eta: string; reserve: number }) =>
+      `Próxima reserva a las ${o.start}. Llegada estimada ~${o.eta}. ${
+        o.reserve >= 0
+          ? `${o.reserve} min de margen.`
+          : `${Math.abs(o.reserve)} min de retraso.`
       }`,
   },
 } as const;

@@ -135,6 +135,7 @@ import {
 import {
   addNearbyStopToRecord,
   canAddNearbyStops,
+  GO_EDIT_LABELS,
 } from "@/lib/journey/go-edit";
 import type { RecoverySuggestionAction } from "@/lib/journey/recovery";
 import type {
@@ -145,106 +146,419 @@ import { GuardianBanner } from "@/components/sections/go-mode/guardian-banner";
 import { GuardianConflictCard } from "@/components/sections/go-mode/guardian-conflict";
 import { GuardianFreeTimeSection } from "@/components/sections/go-mode/guardian-free-time";
 import { GuardianDayStartSection } from "@/components/sections/go-mode/guardian-day-start";
+// ISSUE #24 Sklop 8 (1.170.0): GO MODE I18N FAZA 2 — polni prevodi it/de/fr/es
+// (helper GL z EN-dedovanjem po vzorcu planner-lang PL; podatkovni pari
+// shranjenih zapisov {sl,en} ostanejo jezikovno nevtralni — tuji uporabnik
+// vidi EN stran para, NIKOLI SL; P4-8: ne mešaj jezikov).
+import {
+  GL,
+  GFn,
+  goAll,
+  goLangOf,
+  goLocaleTag,
+  type GoLang,
+  type GoStrings,
+} from "@/lib/journey/go-lang";
 
 // ---------------------------------------------------------------------------
-// Oznake (L vzorec — enak kanon kot journey-planner/journey-trip)
+// Oznake (6-jezični L vzorec — ISSUE #24 Sklop 8 faza 2; SL/EN nespremenjena)
 // ---------------------------------------------------------------------------
 
 const L = {
-  now: { sl: "Zdaj", en: "Now" },
+  now: { sl: "Zdaj", en: "Now", it: "Ora", de: "Jetzt", fr: "Maintenant", es: "Ahora" },
   gps: {
-    start: { sl: "Vklopi GPS", en: "Turn on GPS" },
-    stop: { sl: "Izklopi GPS", en: "Turn off GPS" },
+    start: {
+      sl: "Vklopi GPS",
+      en: "Turn on GPS",
+      it: "Attiva il GPS",
+      de: "GPS aktivieren",
+      fr: "Activer le GPS",
+      es: "Activar el GPS",
+    },
+    stop: {
+      sl: "Izklopi GPS",
+      en: "Turn off GPS",
+      it: "Disattiva il GPS",
+      de: "GPS deaktivieren",
+      fr: "Désactiver le GPS",
+      es: "Desactivar el GPS",
+    },
     status: {
-      idle: { sl: "GPS je izklopljen.", en: "GPS is off." },
-      requesting: { sl: "Nastavljam fiksacijo …", en: "Fixing position …" },
-      active: { sl: "GPS aktiven", en: "GPS active" },
+      idle: {
+        sl: "GPS je izklopljen.",
+        en: "GPS is off.",
+        it: "Il GPS è disattivato.",
+        de: "Das GPS ist aus.",
+        fr: "Le GPS est désactivé.",
+        es: "El GPS está desactivado.",
+      },
+      requesting: {
+        sl: "Nastavljam fiksacijo …",
+        en: "Fixing position …",
+        it: "Rilevo la posizione …",
+        de: "Position wird ermittelt …",
+        fr: "Localisation en cours …",
+        es: "Fijando la posición …",
+      },
+      active: {
+        sl: "GPS aktiven",
+        en: "GPS active",
+        it: "GPS attivo",
+        de: "GPS aktiv",
+        fr: "GPS actif",
+        es: "GPS activo",
+      },
       denied: {
         sl: "Dovoljenje za lokacijo je zavrnjeno — omogoči ga v nastavitvah brskalnika.",
         en: "Location permission denied — enable it in the browser settings.",
+        it: "Permesso di localizzazione negato — attivalo nelle impostazioni del browser.",
+        de: "Standortberechtigung abgelehnt — aktiviere sie in den Browser-Einstellungen.",
+        fr: "Autorisation de localisation refusée — active-la dans les réglages du navigateur.",
+        es: "Permiso de ubicación denegado — actívalo en los ajustes del navegador.",
       },
       unavailable: {
         sl: "Ta naprava ali brskalnik ne podpira Geolocation API.",
         en: "This device or browser does not support the Geolocation API.",
+        it: "Questo dispositivo o browser non supporta la Geolocation API.",
+        de: "Dieses Gerät oder dieser Browser unterstützt die Geolocation-API nicht.",
+        fr: "Cet appareil ou ce navigateur ne prend pas en charge l'API Geolocation.",
+        es: "Este dispositivo o navegador no admite la API de geolocalización.",
       },
-      error: { sl: "GPS napaka", en: "GPS error" },
-    } as Record<GeoStatus, { sl: string; en: string }>,
+      error: {
+        sl: "GPS napaka",
+        en: "GPS error",
+        it: "Errore GPS",
+        de: "GPS-Fehler",
+        fr: "Erreur GPS",
+        es: "Error de GPS",
+      },
+    } as Record<GeoStatus, GoStrings>,
     accuracy: {
       sl: (m: number) => `natančnost ±${Math.round(m)} m`,
       en: (m: number) => `accuracy ±${Math.round(m)} m`,
+      it: (m: number) => `precisione ±${Math.round(m)} m`,
+      de: (m: number) => `Genauigkeit ±${Math.round(m)} m`,
+      fr: (m: number) => `précision ±${Math.round(m)} m`,
+      es: (m: number) => `precisión ±${Math.round(m)} m`,
     },
     // ISSUE #21 §10 (1.161.0): wake lock — prikaz SAMO dejanskega stanja.
     wake: {
       sl: "zaslon ostaja prižgan",
       en: "screen stays on",
+      it: "lo schermo resta acceso",
+      de: "der Bildschirm bleibt an",
+      fr: "l'écran reste allumé",
+      es: "la pantalla sigue encendida",
     },
   },
-  next: { sl: "Naslednje", en: "Next" },
+  next: {
+    sl: "Naslednje",
+    en: "Next",
+    it: "Prossima",
+    de: "Als Nächstes",
+    fr: "Ensuite",
+    es: "Siguiente",
+  },
   // TASK 102 — ISSUE #21 §10/§12: »NASLEDNJE PO TEM« (postanek po trenutnem).
-  nextAfter: { sl: "Nato", en: "Then" },
+  nextAfter: {
+    sl: "Nato",
+    en: "Then",
+    it: "Poi",
+    de: "Danach",
+    fr: "Ensuite",
+    es: "Después",
+  },
   nextAfterEmpty: {
     sl: "To je zadnji postanek dneva.",
     en: "This is the last stop of the day.",
+    it: "Questa è l'ultima tappa della giornata.",
+    de: "Dies ist die letzte Station des Tages.",
+    fr: "C'est le dernier arrêt de la journée.",
+    es: "Esta es la última parada del día.",
   },
-  today: { sl: "Danes načrtovano", en: "Planned today" },
-  done: { sl: "Opravljeno", en: "Completed" },
-  complete: { sl: "Opravi", en: "Done" },
-  restore: { sl: "Obnovi", en: "Restore" },
+  today: {
+    sl: "Danes načrtovano",
+    en: "Planned today",
+    it: "In programma oggi",
+    de: "Heute geplant",
+    fr: "Prévu aujourd'hui",
+    es: "Previsto hoy",
+  },
+  done: {
+    sl: "Opravljeno",
+    en: "Completed",
+    it: "Completato",
+    de: "Erledigt",
+    fr: "Terminé",
+    es: "Completado",
+  },
+  complete: {
+    sl: "Opravi",
+    en: "Done",
+    it: "Completa",
+    de: "Erledigen",
+    fr: "Terminer",
+    es: "Completar",
+  },
+  restore: {
+    sl: "Obnovi",
+    en: "Restore",
+    it: "Ripristina",
+    de: "Wiederherstellen",
+    fr: "Restaurer",
+    es: "Restaurar",
+  },
   // ISSUE #21 §5: preskok pod nadzorom uporabnika (Preskoči ≠ Opravi).
-  skip: { sl: "Preskoči", en: "Skip" },
-  skippedSection: { sl: "Preskočeno", en: "Skipped" },
+  skip: {
+    sl: "Preskoči",
+    en: "Skip",
+    it: "Salta",
+    de: "Überspringen",
+    fr: "Passer",
+    es: "Omitir",
+  },
+  skippedSection: {
+    sl: "Preskočeno",
+    en: "Skipped",
+    it: "Saltate",
+    de: "Übersprungen",
+    fr: "Passés",
+    es: "Omitidas",
+  },
   skipHint: {
     sl: "Preskočeni postanek ni opravljen — vrneš ga lahko z Obnovi.",
     en: "A skipped stop is not completed — you can bring it back with Restore.",
+    it: "Una tappa saltata non è completata — puoi riportarla con Ripristina.",
+    de: "Eine übersprungene Station ist nicht erledigt — du kannst sie mit Wiederherstellen zurückholen.",
+    fr: "Un arrêt passé n'est pas terminé — tu peux le restaurer avec Restaurer.",
+    es: "Una parada omitida no está completada — puedes devolverla con Restaurar.",
   },
   // ISSUE #21 §11: rezervacijski žeton (samo iz DEJANSKE vrstice).
-  bookingChip: { sl: "Rezervacija", en: "Booking" },
-  laterDays: { sl: "Naslednji dnevi", en: "Coming days" },
+  bookingChip: {
+    sl: "Rezervacija",
+    en: "Booking",
+    it: "Prenotazione",
+    de: "Buchung",
+    fr: "Réservation",
+    es: "Reserva",
+  },
+  laterDays: {
+    sl: "Naslednji dnevi",
+    en: "Coming days",
+    it: "Prossimi giorni",
+    de: "Kommende Tage",
+    fr: "Jours suivants",
+    es: "Próximos días",
+  },
   // ISSUE #4 §16 (val 4): dnevna navigacija — preklapljanje dni.
-  dayNav: { sl: "Dnevi poti", en: "Trip days" },
-  dayToday: { sl: "Danes", en: "Today" },
+  dayNav: {
+    sl: "Dnevi poti",
+    en: "Trip days",
+    it: "Giorni di viaggio",
+    de: "Reisetage",
+    fr: "Jours de voyage",
+    es: "Días de viaje",
+  },
+  dayToday: {
+    sl: "Danes",
+    en: "Today",
+    it: "Oggi",
+    de: "Heute",
+    fr: "Aujourd'hui",
+    es: "Hoy",
+  },
   dayManual: {
     sl: "Dan izbran ročno — »Danes« se vrne na današnji datum.",
     en: "Day selected manually — “Today” returns to today's date.",
+    it: "Giorno selezionato manualmente — \"Oggi\" torna alla data di oggi.",
+    de: "Tag manuell gewählt — \"Heute\" kehrt zum heutigen Datum zurück.",
+    fr: "Jour choisi manuellement — \"Aujourd'hui\" revient à la date du jour.",
+    es: "Día elegido manualmente — \"Hoy\" vuelve a la fecha de hoy.",
   },
-  stops: { sl: "postankov", en: "stops" },
-  inAir: { sl: "v zraku", en: "as the crow flies" },
-  toward: { sl: "proti", en: "toward" },
-  hours: { sl: "Odpiralni časi", en: "Opening hours" },
-  call: { sl: "Pokliči", en: "Call" },
-  bookAt: { sl: "Rezerviraj pri ponudniku", en: "Book at the provider" },
-  openSource: { sl: "Odpri vir", en: "Open source" },
-  planLink: { sl: "Nazaj na potovanje", en: "Back to the journey" },
-  end: { sl: "Zaključi Na poti", en: "End On-the-road" },
+  stops: {
+    sl: "postankov",
+    en: "stops",
+    it: "tappe",
+    de: "Stationen",
+    fr: "arrêts",
+    es: "paradas",
+  },
+  inAir: {
+    sl: "v zraku",
+    en: "as the crow flies",
+    it: "in linea d'aria",
+    de: "Luftlinie",
+    fr: "à vol d'oiseau",
+    es: "en línea recta",
+  },
+  toward: {
+    sl: "proti",
+    en: "toward",
+    it: "verso",
+    de: "Richtung",
+    fr: "vers",
+    es: "hacia",
+  },
+  hours: {
+    sl: "Odpiralni časi",
+    en: "Opening hours",
+    it: "Orari di apertura",
+    de: "Öffnungszeiten",
+    fr: "Horaires d'ouverture",
+    es: "Horario de apertura",
+  },
+  call: {
+    sl: "Pokliči",
+    en: "Call",
+    it: "Chiama",
+    de: "Anrufen",
+    fr: "Appeler",
+    es: "Llamar",
+  },
+  bookAt: {
+    sl: "Rezerviraj pri ponudniku",
+    en: "Book at the provider",
+    it: "Prenota dal fornitore",
+    de: "Beim Anbieter buchen",
+    fr: "Réserver chez le prestataire",
+    es: "Reservar con el proveedor",
+  },
+  openSource: {
+    sl: "Odpri vir",
+    en: "Open source",
+    it: "Apri la fonte",
+    de: "Quelle öffnen",
+    fr: "Ouvrir la source",
+    es: "Abrir la fuente",
+  },
+  planLink: {
+    sl: "Nazaj na potovanje",
+    en: "Back to the journey",
+    it: "Torna al viaggio",
+    de: "Zurück zur Reise",
+    fr: "Retour au voyage",
+    es: "Volver al viaje",
+  },
+  // ISSUE #4 §2 (val 2): v2 AI zapis — nazaj na NAČRT (ne potovanje).
+  backToPlan: {
+    sl: "Nazaj na načrt",
+    en: "Back to the plan",
+    it: "Torna al piano",
+    de: "Zurück zum Plan",
+    fr: "Retour au plan",
+    es: "Volver al plan",
+  },
+  end: {
+    sl: "Zaključi Na poti",
+    en: "End On-the-road",
+    it: "Termina In viaggio",
+    de: "Unterwegs beenden",
+    fr: "Terminer En route",
+    es: "Finalizar En camino",
+  },
   endConfirm: {
-    title: { sl: "Zaključim Na poti?", en: "End On-the-road?" },
+    title: {
+      sl: "Zaključim Na poti?",
+      en: "End On-the-road?",
+      it: "Terminare In viaggio?",
+      de: "Unterwegs beenden?",
+      fr: "Terminer En route ?",
+      es: "¿Finalizar En camino?",
+    },
     desc: {
       sl: "Načrt in opravljene postanke pobrišem s te naprave. Na /potovanje ga lahko kadar koli sestaviš znova.",
       en: "I will delete the plan and completed stops from this device. You can rebuild it anytime at /potovanje.",
+      it: "Eliminerò il piano e le tappe completate da questo dispositivo. Puoi ricostruirlo in qualsiasi momento su /potovanje.",
+      de: "Ich lösche den Plan und die erledigten Stationen von diesem Gerät. Du kannst ihn jederzeit unter /potovanje neu erstellen.",
+      fr: "Je supprimerai le plan et les arrêts terminés de cet appareil. Tu peux le reconstruire à tout moment sur /potovanje.",
+      es: "Borraré el plan y las paradas completadas de este dispositivo. Puedes reconstruirlo cuando quieras en /potovanje.",
     },
-    cancel: { sl: "Prekliči", en: "Cancel" },
-    action: { sl: "Zaključi", en: "End" },
+    // ISSUE #4 §2 (val 2): v2 AI zapis — iskren vir obnovitve (prej inline).
+    descAi: {
+      sl: "Načrt in opravljene postanke pobrišem s te naprave. AI načrt lahko kadar koli znova odpreš na načrtovalniku ali prek deljene povezave.",
+      en: "I will delete the plan and completed stops from this device. You can reopen the AI plan anytime on the planner or via its shared link.",
+      it: "Eliminerò il piano e le tappe completate da questo dispositivo. Puoi riaprire il piano AI in qualsiasi momento sul pianificatore o tramite il suo link di condivisione.",
+      de: "Ich lösche den Plan und die erledigten Stationen von diesem Gerät. Du kannst den KI-Plan jederzeit im Planer oder über seinen geteilten Link wieder öffnen.",
+      fr: "Je supprimerai le plan et les arrêts terminés de cet appareil. Tu peux rouvrir le plan IA à tout moment dans le planificateur ou via son lien de partage.",
+      es: "Borraré el plan y las paradas completadas de este dispositivo. Puedes reabrir el plan de IA cuando quieras en el planificador o a través de su enlace compartido.",
+    },
+    cancel: {
+      sl: "Prekliči",
+      en: "Cancel",
+      it: "Annulla",
+      de: "Abbrechen",
+      fr: "Annuler",
+      es: "Cancelar",
+    },
+    action: {
+      sl: "Zaključi",
+      en: "End",
+      it: "Termina",
+      de: "Beenden",
+      fr: "Terminer",
+      es: "Finalizar",
+    },
   },
   empty: {
-    title: { sl: "Ni aktivnega potovanja", en: "No active journey" },
+    title: {
+      sl: "Ni aktivnega potovanja",
+      en: "No active journey",
+      it: "Nessun viaggio attivo",
+      de: "Keine aktive Reise",
+      fr: "Aucun voyage actif",
+      es: "Ningún viaje activo",
+    },
     desc: {
       sl: "Sestavi potovanje na strani Potovanje (prihod, destinacija, postanke po 4 državah), izberi kar te zanima in pritisni „Zaženi Na poti“.",
       en: "Build a journey on the Journey page (arrival, destination, stops across 4 countries), pick what interests you and press “Start On-the-road”.",
+      it: "Crea un viaggio nella pagina Viaggio (arrivo, destinazione, tappe in 4 paesi), scegli ciò che ti interessa e premi „Avvia In viaggio“.",
+      de: "Stelle auf der Seite Reise eine Reise zusammen (Ankunft, Ziel, Stationen in 4 Ländern), wähle, was dich interessiert, und drücke „Unterwegs starten“.",
+      fr: "Compose un voyage sur la page Voyage (arrivée, destination, arrêts dans 4 pays), choisis ce qui t'intéresse et appuie sur “Démarrer En route”.",
+      es: "Crea un viaje en la página Viaje (llegada, destino, paradas en 4 países), elige lo que te interese y pulsa “Iniciar En camino”.",
     },
     // TASK 4 / K-7: drugi izhod za uporabnike AI NAČRTA — prej je empty
     // state vodil SAMO v /potovanje (drugi koncept), AI načrt ni imel mostu.
     descAi: {
       sl: "Imaš AI načrt? Gumb „Zaženi Na poti“ na načrtovalniku (ali deljeni povezavi) ga naloži sem — deluje tudi brez signala.",
       en: "Have an AI plan? The “Start On-the-road” button on the planner (or a shared link) loads it here — it works offline too.",
+      it: "Hai un piano AI? Il pulsante „Avvia In viaggio“ nel pianificatore (o un link condiviso) lo carica qui — funziona anche senza segnale.",
+      de: "Du hast einen KI-Plan? Die Schaltfläche „Unterwegs starten“ im Planer (oder ein geteilter Link) lädt ihn hierher — er funktioniert auch offline.",
+      fr: "Tu as un plan IA ? Le bouton “Démarrer En route” dans le planificateur (ou un lien partagé) le charge ici — il fonctionne aussi hors ligne.",
+      es: "¿Tienes un plan de IA? El botón “Iniciar En camino” del planificador (o un enlace compartido) lo carga aquí — también funciona sin conexión.",
     },
-    cta: { sl: "Sestavi potovanje", en: "Build a journey" },
-    ctaAi: { sl: "Načrtuj z AI", en: "Plan with AI" },
+    cta: {
+      sl: "Sestavi potovanje",
+      en: "Build a journey",
+      it: "Crea un viaggio",
+      de: "Reise zusammenstellen",
+      fr: "Composer un voyage",
+      es: "Crear un viaje",
+    },
+    ctaAi: {
+      sl: "Načrtuj z AI",
+      en: "Plan with AI",
+      it: "Pianifica con l'AI",
+      de: "Mit KI planen",
+      fr: "Planifier avec l'IA",
+      es: "Planificar con IA",
+    },
   },
-  duration: { sl: "trajanje", en: "duration" },
-  min: { sl: "min", en: "min" },
+  duration: {
+    sl: "trajanje",
+    en: "duration",
+    it: "durata",
+    de: "Dauer",
+    fr: "durée",
+    es: "duración",
+  },
+  min: { sl: "min", en: "min", it: "min", de: "Min.", fr: "min", es: "min" },
   offline: {
     sl: "Načrt je shranjen na tej napravi — deluje tudi brez signala.",
     en: "The plan is stored on this device — it works offline too.",
+    it: "Il piano è salvato su questo dispositivo — funziona anche senza segnale.",
+    de: "Der Plan ist auf diesem Gerät gespeichert — er funktioniert auch offline.",
+    fr: "Le plan est enregistré sur cet appareil — il fonctionne aussi hors ligne.",
+    es: "El plan está guardado en este dispositivo — también funciona sin conexión.",
   },
   // ISSUE #4 §16 (val 4): MATRIKA ZMOŽNOSTI BREZ SIGNALA — iskrena
   // ločitev (nikoli splošna "offline" oznaka): dnevi/postanki/GPS-ure
@@ -253,52 +567,125 @@ const L = {
   offlineMatrix: {
     sl: "Brez signala: dnevi in postanki delujejo · navigacijski gumb odpre zunanjo aplikacijo · vreme potrebuje signal",
     en: "Offline: days and stops work · the navigation button opens an external app · weather needs a signal",
+    it: "Senza segnale: giorni e tappe funzionano · il pulsante di navigazione apre un'app esterna · il meteo richiede segnale",
+    de: "Ohne Signal: Tage und Stationen funktionieren · der Navigationsknopf öffnet eine externe App · Wetter braucht Signal",
+    fr: "Sans signal : les jours et les arrêts fonctionnent · le bouton de navigation ouvre une application externe · la météo nécessite un signal",
+    es: "Sin conexión: los días y las paradas funcionan · el botón de navegación abre una aplicación externa · el tiempo necesita conexión",
   },
   // === ISSUE #4 §8 (val 2): real-time kontekst — pošteni žetoni ===
   driveFromPrev: {
     sl: "vožnja od prejšnjega postanka",
     en: "drive from the previous stop",
+    it: "viaggio dalla tappa precedente",
+    de: "Fahrt von der vorherigen Station",
+    fr: "trajet depuis l'arrêt précédent",
+    es: "trayecto desde la parada anterior",
   },
   legSource: {
-    osrm: { sl: "vir: OSRM (realne ceste)", en: "source: OSRM (real roads)" },
-    heuristic: { sl: "ocena (hevristika)", en: "estimate (heuristic)" },
+    osrm: {
+      sl: "vir: OSRM (realne ceste)",
+      en: "source: OSRM (real roads)",
+      it: "fonte: OSRM (strade reali)",
+      de: "Quelle: OSRM (echte Straßen)",
+      fr: "source : OSRM (routes réelles)",
+      es: "fuente: OSRM (carreteras reales)",
+    },
+    heuristic: {
+      sl: "ocena (hevristika)",
+      en: "estimate (heuristic)",
+      it: "stima (euristica)",
+      de: "Schätzung (Heuristik)",
+      fr: "estimation (heuristique)",
+      es: "estimación (heurística)",
+    },
+    // ISSUE #24 Sklop 8: prej INLINE par {sl:"mešano",en:"mixed"} v izrisu.
+    mixed: {
+      sl: "mešano",
+      en: "mixed",
+      it: "misto",
+      de: "gemischt",
+      fr: "mixte",
+      es: "mixto",
+    },
   },
   eta: {
-    label: { sl: "Predviden prihod", en: "Estimated arrival" },
+    label: {
+      sl: "Predviden prihod",
+      en: "Estimated arrival",
+      it: "Arrivo previsto",
+      de: "Voraussichtliche Ankunft",
+      fr: "Arrivée estimée",
+      es: "Llegada estimada",
+    },
     hint: {
       sl: "ocena iz premočne razdalje ×1,3 pri 55 km/h — ni podatka o prometu",
       en: "estimate from straight-line ×1.3 at 55 km/h — no traffic data",
+      it: "stima dalla distanza in linea d'aria ×1,3 a 55 km/h — nessun dato sul traffico",
+      de: "Schätzung aus der Luftlinie ×1,3 bei 55 km/h — keine Verkehrsdaten",
+      fr: "estimation depuis la ligne droite ×1,3 à 55 km/h — pas de données de trafic",
+      es: "estimación desde la línea recta ×1,3 a 55 km/h — sin datos de tráfico",
     },
     unknown: {
       sl: "Predviden prihod: neznano — brez GPS ali vozne razdalje",
       en: "Estimated arrival: unknown — no GPS or drive distance",
+      it: "Arrivo previsto: sconosciuto — senza GPS o distanza stradale",
+      de: "Voraussichtliche Ankunft: unbekannt — ohne GPS oder Fahrstrecke",
+      fr: "Arrivée estimée : inconnue — sans GPS ni distance routière",
+      es: "Llegada estimada: desconocida — sin GPS ni distancia por carretera",
     },
   },
   delay: {
-    sl: "Zamude in promet v realnem času: NEZNANO — nimamo vira (niti lažnega prometa).",
+    sl: "Zamude in promet v realnem času: NEZNANO — nimamo vira (niti lažnjega prometa).",
     en: "Real-time delays and traffic: UNKNOWN — we have no source (and no fake traffic either).",
+    it: "Ritardi e traffico in tempo reale: SCONOSCIUTO — non abbiamo una fonte (e nemmeno traffico finto).",
+    de: "Echtzeit-Verspätungen und Verkehr: UNBEKANNT — wir haben keine Quelle (und auch keinen Fake-Verkehr).",
+    fr: "Retards et trafic en temps réel : INCONNU — nous n'avons pas de source (ni de faux trafic).",
+    es: "Retrasos y tráfico en tiempo real: DESCONOCIDO — no tenemos fuente (ni tráfico falso).",
   },
   dayRoute: {
     sl: (n: number, km: number, min: number, method: string) =>
       `Pot dneva: ${n} postankov · skupaj ~${km} km · ~${min} min (${method})`,
     en: (n: number, km: number, min: number, method: string) =>
       `Day's route: ${n} stops · ~${km} km total · ~${min} min (${method})`,
+    it: (n: number, km: number, min: number, method: string) =>
+      `Percorso del giorno: ${n} tappe · ~${km} km in totale · ~${min} min (${method})`,
+    de: (n: number, km: number, min: number, method: string) =>
+      `Tagesroute: ${n} Stationen · insgesamt ~${km} km · ~${min} Min. (${method})`,
+    fr: (n: number, km: number, min: number, method: string) =>
+      `Itinéraire du jour : ${n} arrêts · ~${km} km au total · ~${min} min (${method})`,
+    es: (n: number, km: number, min: number, method: string) =>
+      `Ruta del día: ${n} paradas · ~${km} km en total · ~${min} min (${method})`,
   },
   hoursMissing: {
     sl: "vir ne objavlja ur — preveri pri postanku",
     en: "not published by the source — check on arrival",
+    it: "orari non pubblicati dalla fonte — verifica all'arrivo",
+    de: "von der Quelle nicht veröffentlicht — vor Ort prüfen",
+    fr: "non publiés par la source — vérifie sur place",
+    es: "no publicados por la fuente — verifica al llegar",
   },
   savedTrip: {
-    link: { sl: "Odpri shranjeno pot", en: "Open the saved trip" },
+    link: {
+      sl: "Odpri shranjeno pot",
+      en: "Open the saved trip",
+      it: "Apri il viaggio salvato",
+      de: "Gespeicherte Reise öffnen",
+      fr: "Ouvrir le voyage enregistré",
+      es: "Abrir el viaje guardado",
+    },
     note: {
       sl: "Ta načrt je povezan s shranjeno potjo (/pot/…).",
       en: "This plan is linked to a saved trip (/pot/…).",
+      it: "Questo piano è collegato a un viaggio salvato (/pot/…).",
+      de: "Dieser Plan ist mit einer gespeicherten Reise verknüpft (/pot/…).",
+      fr: "Ce plan est lié à un voyage enregistré (/pot/…).",
+      es: "Este plan está vinculado a un viaje guardado (/pot/…).",
     },
   },
 } as const;
 
-function localeTime(d: Date, lang: "sl" | "en"): string {
-  return d.toLocaleTimeString(lang === "sl" ? "sl-SI" : "en-GB", {
+function localeTime(d: Date, lang: GoLang): string {
+  return d.toLocaleTimeString(goLocaleTag(lang), {
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -308,13 +695,13 @@ function localeTime(d: Date, lang: "sl" | "en"): string {
 // Kartice
 // ---------------------------------------------------------------------------
 
-function DistanceChip({ card, lang }: { card: GoEntryCard; lang: "sl" | "en" }) {
+function DistanceChip({ card, lang }: { card: GoEntryCard; lang: GoLang }) {
   if (card.distanceKm == null || !card.bearingLabel) return null;
   return (
     <Badge className="gap-1 border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-50 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
       <MapPin className="h-3 w-3" />
-      {card.distanceKm} km {L.toward[lang]} {card.bearingLabel[lang]} ·{" "}
-      {L.inAir[lang]}
+      {card.distanceKm} km {GL(lang, L.toward)} {GL(lang, card.bearingLabel)} ·{" "}
+      {GL(lang, L.inAir)}
     </Badge>
   );
 }
@@ -329,25 +716,25 @@ function LegChip({
   lang,
 }: {
   card: GoEntryCard;
-  lang: "sl" | "en";
+  lang: GoLang;
 }) {
   const leg = card.entry.legFromPrev;
   if (!leg) return null;
   return (
     <Badge
       className="gap-1 border-sky-300 bg-sky-50 text-sky-900 hover:bg-sky-50 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-200"
-      title={L.driveFromPrev[lang]}
+      title={GL(lang, L.driveFromPrev)}
     >
       <RouteIcon className="h-3 w-3" aria-hidden="true" />
-      ~{leg.km} km · ~{leg.min} {L.min[lang]} ·{" "}
+      ~{leg.km} km · ~{leg.min} {GL(lang, L.min)} ·{" "}
       {t2(leg.source === "osrm" ? L.legSource.osrm : L.legSource.heuristic, lang)}
     </Badge>
   );
 }
 
-/** Dvojezična pomožna (krajšanje za žetone). */
-function t2(o: { sl: string; en: string }, lang: "sl" | "en") {
-  return o[lang];
+/** Pomožna za žetone (UI slovarji z EN-dedovanjem — Sklop 8). */
+function t2(o: GoStrings, lang: GoLang) {
+  return GL(lang, o);
 }
 
 function EntryLinks({
@@ -355,7 +742,7 @@ function EntryLinks({
   lang,
 }: {
   card: GoEntryCard;
-  lang: "sl" | "en";
+  lang: GoLang;
 }) {
   const e = card.entry;
   return (
@@ -372,7 +759,7 @@ function EntryLinks({
           }
           className="inline-flex items-center gap-1 font-medium text-violet-700 underline-offset-4 hover:underline dark:text-violet-400"
         >
-          {L.bookAt[lang]} <ExternalLink className="h-3.5 w-3.5" />
+          {GL(lang, L.bookAt)} <ExternalLink className="h-3.5 w-3.5" />
         </a>
       )}
       {e.sourceUrl && (
@@ -382,7 +769,7 @@ function EntryLinks({
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1 text-muted-foreground underline-offset-4 hover:underline"
         >
-          {L.openSource[lang]} <ExternalLink className="h-3 w-3" />
+          {GL(lang, L.openSource)} <ExternalLink className="h-3 w-3" />
         </a>
       )}
       {e.phone && (
@@ -390,7 +777,7 @@ function EntryLinks({
           href={`tel:${e.phone.replace(/\s+/g, "")}`}
           className="inline-flex items-center gap-1 text-muted-foreground underline-offset-4 hover:underline"
         >
-          <Phone className="h-3.5 w-3.5" /> {L.call[lang]}: {e.phone}
+          <Phone className="h-3.5 w-3.5" /> {GL(lang, L.call)}: {e.phone}
         </a>
       )}
     </div>
@@ -418,7 +805,7 @@ function NavButton({
   origin,
 }: {
   card: GoEntryCard;
-  lang: "sl" | "en";
+  lang: GoLang;
   variant?: "hero" | "icon";
   /** ISSUE #4 §8: živi GPS — prenese se v web URL (external app dobi
    * dejansko izhodišče; brez njega uporabi svojo lokacijo). */
@@ -437,8 +824,8 @@ function NavButton({
     }
   };
 
-  const externalHint = GO_NAV_LABELS.external[lang];
-  const aria = GO_NAV_LABELS.navigateAria[lang](card.entry.title);
+  const externalHint = GL(lang, GO_NAV_LABELS.external);
+  const aria = GFn(lang, GO_NAV_LABELS.navigateAria)(card.entry.title);
 
   if (variant === "icon") {
     return (
@@ -471,7 +858,7 @@ function NavButton({
         title={externalHint}
         aria-label={aria}
       >
-        <NavigationIcon className="mr-2 h-4 w-4" /> {GO_NAV_LABELS.navigate[lang]}
+        <NavigationIcon className="mr-2 h-4 w-4" /> {GL(lang, GO_NAV_LABELS.navigate)}
       </a>
     </Button>
   );
@@ -483,12 +870,12 @@ function NavButton({
 
 export function GoMode() {
   const locale = useLocale();
-  // ISSUE #24 Sklop 7 (1.169.0): SL-first resolucija — /na-poti je zdaj
-  // odprt za vseh 6 jezikov; it/de/fr/es dedijo EN Go Mode površino
-  // (L-vzorec {sl,en} + PL prehodni kanon), NIKOLI SL (P4-8: ne mešaj
-  // jezikov — prej je POJDI zavihek tuje uporabnike pahnil na SL stran).
-  const lang: "sl" | "en" = locale === "sl" ? "sl" : "en";
-  const t = (o: { sl: string; en: string }) => o[lang];
+  // ISSUE #24 Sklop 8 (1.170.0): FAZA 2 — polni prevodi. Resolucija po
+  // goLangOf: vseh 6 javnih jezikov živi na /{locale}/na-poti; neprevedene
+  // enote (izjemoma) dedijo EN prek GL; neznan locale → SL (izvirnik).
+  // Prej (faza 1): vsi tuji → EN (prehodni PL kanon).
+  const lang: GoLang = goLangOf(locale);
+  const t = (o: GoStrings) => GL(lang, o);
 
   // Hidracijska varnost: localStorage + živa ura se naložita TEKOM mounta —
   // setState v callbacku makro-naloge (NE sinhrono v telesu efekta — pravilo
@@ -889,10 +1276,7 @@ export function GoMode() {
   const [nearbyFits, setNearbyFits] = useState<NearbyFit[]>([]);
   const [nearbyLoading, setNearbyLoading] = useState(false);
   const [nearbyUnavailable, setNearbyUnavailable] = useState(false);
-  const [nearbyFeedback, setNearbyFeedback] = useState<{
-    sl: string;
-    en: string;
-  } | null>(null);
+  const [nearbyFeedback, setNearbyFeedback] = useState<GoStrings | null>(null);
 
   /** Ključ nalaganja: kategorija + groba pozicija (~100 m) + dolžina okna —
    *  refetch SAMO ob dejanski spremembi (nov fix < 100 m tika ne sproži). */
@@ -983,10 +1367,7 @@ export function GoMode() {
     (fit: NearbyFit) => {
       if (!record || !view) return;
       if (!canAddNearbyStops(record)) {
-        setNearbyFeedback({
-          sl: "Ta pot je kanonična (iz načrtovalnika potovanj) — dodajanje med potjo ni mogoče. Odpri lokacijo na zemljevidu.",
-          en: "This trip is canonical (from the journey planner) — adding stops mid-trip is not possible. Open the location on the map.",
-        });
+        setNearbyFeedback(GO_EDIT_LABELS.notPossibleV1);
         return;
       }
       const updated = addNearbyStopToRecord(
@@ -1004,10 +1385,8 @@ export function GoMode() {
       const shareId = record.version === 2 ? record.shareId : undefined;
       if (!saveItineraryGoTrip(updated.view, { shareId })) return;
       setRecord(updated);
-      setNearbyFeedback({
-        sl: `✓ ${fit.candidate.title} dodan na konec dneva.`,
-        en: `✓ ${fit.candidate.title} added to the end of the day.`,
-      });
+      // Sklop 8: en vir resnice (GO_EDIT_LABELS.added) — prej inline dvojnik.
+      setNearbyFeedback(goAll(GO_EDIT_LABELS.added, fit.candidate.title));
     },
     [record, view]
   );
@@ -1148,7 +1527,7 @@ export function GoMode() {
           <div className="text-right" role="status" aria-live="off">
             <p className="text-xs text-muted-foreground">
               {t(L.now)} ·{" "}
-              {now.toLocaleDateString(lang === "sl" ? "sl-SI" : "en-GB", {
+              {now.toLocaleDateString(goLocaleTag(lang), {
                 weekday: "short",
                 day: "numeric",
                 month: "short",
@@ -1262,7 +1641,7 @@ export function GoMode() {
               </p>
               {view.next.countdownMin != null && (
                 <Badge className="border-emerald-300 bg-emerald-50 text-emerald-900 hover:bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
-                  {GO_LABELS.countdown[lang](view.next.countdownMin)}
+                  {GFn(lang, GO_LABELS.countdown)(view.next.countdownMin)}
                 </Badge>
               )}
             </div>
@@ -1313,7 +1692,7 @@ export function GoMode() {
                           ~{etaInfo.hhmm}
                         </span>
                         <span className="text-xs text-muted-foreground">
-                          (~{etaInfo.km} km · ~{etaInfo.min} {L.min[lang]} ·{" "}
+                          (~{etaInfo.km} km · ~{etaInfo.min} {GL(lang, L.min)} ·{" "}
                           {t(L.eta.hint)})
                         </span>
                       </p>
@@ -1334,7 +1713,7 @@ export function GoMode() {
                   className="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200"
                 >
                   <MapPin className="h-4 w-4 shrink-0" aria-hidden="true" />
-                  {ARRIVAL_LABELS.near[lang](view.next.travel.arrivalM)}
+                  {GFn(lang, ARRIVAL_LABELS.near)(view.next.travel.arrivalM)}
                 </p>
               )}
             {view.next.travel?.status === "arrived" && (
@@ -1344,7 +1723,7 @@ export function GoMode() {
               >
                 <p className="flex items-center gap-2 text-sm font-semibold text-emerald-900 dark:text-emerald-200">
                   <span aria-hidden>✓</span>
-                  {ARRIVAL_LABELS.arrived[lang](view.next.entry.title)}
+                  {GFn(lang, ARRIVAL_LABELS.arrived)(view.next.entry.title)}
                 </p>
                 <p className="text-xs text-emerald-800/80 dark:text-emerald-300/80">
                   {t(ARRIVAL_LABELS.arrivedHint)}
@@ -1392,13 +1771,13 @@ export function GoMode() {
                     </span>
                     {weather.today && (
                       <span className="text-muted-foreground">
-                        {GO_WEATHER_LABELS.today[lang](weather.today)}
+                        {GFn(lang, GO_WEATHER_LABELS.today)(weather.today)}
                       </span>
                     )}
                     <span className="ml-auto text-[11px] text-muted-foreground">
                       {weather.observedAt &&
                         observedTimeLabel(weather.observedAt) &&
-                        `${GO_WEATHER_LABELS.observed[lang](
+                        `${GFn(lang, GO_WEATHER_LABELS.observed)(
                           observedTimeLabel(weather.observedAt) as string
                         )} · `}
                       {t(GO_WEATHER_LABELS.source)}
@@ -1423,7 +1802,7 @@ export function GoMode() {
               )}
               {view.next.geo.precision === "approximate" && (
                 <Badge variant="outline" className="font-normal text-muted-foreground">
-                  {STOP_GEO_LABELS.approximate[lang](view.next.geo.source)}
+                  {GFn(lang, STOP_GEO_LABELS.approximate)(view.next.geo.source)}
                 </Badge>
               )}
               <Badge variant="secondary">{t(view.next.entry.statusLabel)}</Badge>
@@ -1440,7 +1819,7 @@ export function GoMode() {
               })()}
               {view.next.entry.durationMin != null && (
                 <Badge variant="outline">
-                  {L.duration[lang]} ~{view.next.entry.durationMin} {L.min[lang]}
+                  {GL(lang, L.duration)} ~{view.next.entry.durationMin} {GL(lang, L.min)}
                 </Badge>
               )}
               {/* W7 — glasovni vodik: izgovor NASLEDNJEGA postanka (ista
@@ -1656,7 +2035,7 @@ export function GoMode() {
               {t(statusLabel)}
               {geo.status === "active" && geo.position?.accuracyM != null && (
                 <span className="text-xs font-normal text-muted-foreground">
-                  {L.gps.accuracy[lang](geo.position.accuracyM)}
+                  {GFn(lang, L.gps.accuracy)(geo.position.accuracyM)}
                 </span>
               )}
               {/* ISSUE #21 §6 (1.161.0) — RAZRED natančnosti (high/medium/
@@ -1682,7 +2061,7 @@ export function GoMode() {
                 view?.positionStale &&
                 now && (
                   <span className="text-xs font-normal text-amber-700 dark:text-amber-400">
-                    {ARRIVAL_LABELS.stale[lang](
+                    {GFn(lang, ARRIVAL_LABELS.stale)(
                       Math.max(
                         1,
                         Math.round(
@@ -1735,7 +2114,7 @@ export function GoMode() {
         <p className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2 text-sm">
           <RouteIcon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
           <span className="font-medium">
-            {L.dayRoute[lang](
+            {GFn(lang, L.dayRoute)(
               view.activeDayRoute.legsKnown + 1,
               view.activeDayRoute.km,
               view.activeDayRoute.min,
@@ -1744,7 +2123,7 @@ export function GoMode() {
                   ? L.legSource.osrm
                   : view.activeDayRoute.method === "heuristic"
                     ? L.legSource.heuristic
-                    : { sl: "mešano", en: "mixed" },
+                    : L.legSource.mixed,
                 lang
               )
             )}
@@ -1752,7 +2131,7 @@ export function GoMode() {
           {view.activeDayRoute.legsKnown < view.activeDayRoute.legsTotal && (
             <span className="text-xs text-muted-foreground">
               ({view.activeDayRoute.legsKnown}/{view.activeDayRoute.legsTotal}{" "}
-              {L.stops[lang]})
+              {GL(lang, L.stops)})
             </span>
           )}
         </p>
@@ -1786,7 +2165,7 @@ export function GoMode() {
                     <div className="flex flex-wrap gap-1.5">
                       {card.countdownMin != null && (
                         <Badge variant="outline">
-                          {GO_LABELS.countdown[lang](card.countdownMin)}
+                          {GFn(lang, GO_LABELS.countdown)(card.countdownMin)}
                         </Badge>
                       )}
                       {card.entry.time?.start && !card.countdownMin && (
@@ -1886,7 +2265,7 @@ export function GoMode() {
                         </s>
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {GO_LABELS.doneAt[lang](card.doneAt)}
+                        {GFn(lang, GO_LABELS.doneAt)(card.doneAt)}
                       </p>
                     </div>
                     <Button
@@ -1971,7 +2350,7 @@ export function GoMode() {
                 >
                   <span className="text-muted-foreground">{t(d.dateLabel)}</span>
                   <span className="font-medium">
-                    {d.count} {L.stops[lang]}
+                    {d.count} {GL(lang, L.stops)}
                   </span>
                 </div>
               ))}
@@ -1997,9 +2376,7 @@ export function GoMode() {
             }
           >
             {record.version === 2
-              ? lang === "sl"
-                ? "Nazaj na načrt"
-                : "Back to the plan"
+              ? t(L.backToPlan)
               : t(L.planLink)}
           </Link>
         </Button>
@@ -2017,11 +2394,7 @@ export function GoMode() {
               <AlertDialogTitle>{t(L.endConfirm.title)}</AlertDialogTitle>
               <AlertDialogDescription>
                 {/* TASK 4 / K-7: iskren vir obnovitve glede na vrsto zapisa */}
-                {record.version === 2
-                  ? lang === "sl"
-                    ? "Načrt in opravljene postanke pobrišem s te naprave. AI načrt lahko kadar koli znova odpreš na načrtovalniku ali prek deljene povezave."
-                    : "I will delete the plan and completed stops from this device. You can reopen the AI plan anytime on the planner or via its shared link."
-                  : t(L.endConfirm.desc)}
+                {record.version === 2 ? t(L.endConfirm.descAi) : t(L.endConfirm.desc)}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

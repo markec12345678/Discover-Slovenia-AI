@@ -24,6 +24,28 @@ import {
   type GuardianNearbyCategory,
   type NearbyFit,
 } from "@/lib/journey/free-time";
+// ISSUE #24 Sklop 8 (1.170.0): 6-jezični izpis + gumba za dodajanje (faza 2).
+import { GL, GFn, type GoLang, type GoStrings } from "@/lib/journey/go-lang";
+
+/** Gumb »v mojo pot« + opomba o kanonični poti (6 jezikov — prej inline). */
+const ADD_LABELS = {
+  toMyTrip: {
+    sl: "V mojo pot",
+    en: "To my trip",
+    it: "Nel mio viaggio",
+    de: "In meine Reise",
+    fr: "Dans mon voyage",
+    es: "A mi viaje",
+  } as const,
+  canonicalHint: {
+    sl: "Ta pot je kanonična — dodajanje med potjo ni mogoče",
+    en: "This trip is canonical — adding stops mid-trip is not possible",
+    it: "Questo viaggio è canonico — aggiungere tappe durante il viaggio non è possibile",
+    de: "Diese Reise ist kanonisch — Hinzufügen unterwegs ist nicht möglich",
+    fr: "Ce voyage est canonique — ajouter des arrêts en cours de route n'est pas possible",
+    es: "Este viaje es canónico — añadir paradas durante el trayecto no es posible",
+  } as const,
+} as const;
 
 const CATEGORY_ICON: Record<GuardianNearbyCategory, typeof Landmark> = {
   sight: Landmark,
@@ -37,7 +59,7 @@ const CATEGORIES: GuardianNearbyCategory[] = ["sight", "food", "drink", "walk"];
 
 export interface GuardianFreeTimeProps {
   window: FreeTimeWindow;
-  lang: "sl" | "en";
+  lang: GoLang;
   /** Izbrana kategorija (null = še ni izbire — izpis poklika). */
   selectedCategory: GuardianNearbyCategory | null;
   onCategorySelect: (category: GuardianNearbyCategory) => void;
@@ -49,7 +71,7 @@ export interface GuardianFreeTimeProps {
   /** Ali je dodajanje v pot mogoče (v2 zapis — sicer klik pove iskreno opombo). */
   canAdd: boolean;
   /** Povratna informacija (uspeh dodajanja ali v1 opomba — iskren feedback). */
-  note?: { sl: string; en: string } | null;
+  note?: GoStrings | null;
   onAdd: (fit: NearbyFit) => void;
 }
 
@@ -65,7 +87,7 @@ export function GuardianFreeTimeSection({
   note,
   onAdd,
 }: GuardianFreeTimeProps) {
-  const t = (o: { sl: string; en: string }) => o[lang];
+  const t = (o: GoStrings) => GL(lang, o);
 
   return (
     <section
@@ -77,20 +99,14 @@ export function GuardianFreeTimeSection({
           ⏳ {t(FREE_TIME_LABELS.title)}
         </p>
         <p className="text-sm font-bold text-emerald-900 dark:text-emerald-100">
-          {lang === "sl"
-            ? FREE_TIME_LABELS.headline.sl(window.minutes)
-            : FREE_TIME_LABELS.headline.en(window.minutes)}{" "}
+          {GFn(lang, FREE_TIME_LABELS.headline)(window.minutes)}{" "}
           <span className="font-normal text-muted-foreground">
             ·{" "}
-            {lang === "sl"
-              ? FREE_TIME_LABELS.until.sl(window.endsAtHhmm)
-              : FREE_TIME_LABELS.until.en(window.endsAtHhmm)}
+            {GFn(lang, FREE_TIME_LABELS.until)(window.endsAtHhmm)}
           </span>
         </p>
         <p className="text-xs text-muted-foreground">
-          {lang === "sl"
-            ? FREE_TIME_LABELS.safety.sl(window.safetyMin)
-            : FREE_TIME_LABELS.safety.en(window.safetyMin)}
+          {GFn(lang, FREE_TIME_LABELS.safety)(window.safetyMin)}
         </p>
       </div>
 
@@ -147,17 +163,11 @@ export function GuardianFreeTimeSection({
                     <span className="truncate">{fit.candidate.title}</span>
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {lang === "sl"
-                      ? FREE_TIME_LABELS.fitLine.sl({
-                          drive: fit.driveThereMin,
-                          visit: fit.visitMin,
-                          back: fit.driveBackMin,
-                        })
-                      : FREE_TIME_LABELS.fitLine.en({
-                          drive: fit.driveThereMin,
-                          visit: fit.visitMin,
-                          back: fit.driveBackMin,
-                        })}
+                    {GFn(lang, FREE_TIME_LABELS.fitLine)({
+                      drive: fit.driveThereMin,
+                      visit: fit.visitMin,
+                      back: fit.driveBackMin,
+                    })}
                     {" · ~"}
                     {fit.distanceKm} km
                   </p>
@@ -178,12 +188,10 @@ export function GuardianFreeTimeSection({
                   title={
                     canAdd
                       ? undefined
-                      : lang === "sl"
-                        ? "Ta pot je kanonična — dodajanje med potjo ni mogoče"
-                        : "This trip is canonical — adding stops mid-trip is not possible"
+                      : GL(lang, ADD_LABELS.canonicalHint)
                   }
                 >
-                  + {lang === "sl" ? "V mojo pot" : "To my trip"}
+                  + {GL(lang, ADD_LABELS.toMyTrip)}
                 </Button>
               </div>
             ))

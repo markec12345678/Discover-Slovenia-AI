@@ -27,6 +27,8 @@ import type {
   MapProductStatus,
 } from "./types";
 import type { BookingMode, ProviderSlug } from "@/lib/supply/types";
+// ISSUE #24 Sklop 8 (1.170.0): 6-jezične oznake (Go Mode žeton rezervacije).
+import type { GoStrings } from "./go-lang";
 
 // ---------------------------------------------------------------------------
 // ZMOŽNOST REZERVACIJE IZ KANONSKEGA MODELA (bookingMode → tok)
@@ -110,41 +112,129 @@ export function isProviderConfirmed(status: ConfirmationStatus): boolean {
 }
 
 /**
- * TASK 99 (issue #1 §2) — dvojezične oznake statusov potrditve za UI
+ * TASK 99 (issue #1 §2) — 6-jezične oznake statusov potrditve za UI
  * (iskrene: npr. REFUNDED samo iz providerjevega odgovora, EXTERNAL vedno
  * „pri ponudniku"). Uporabljajo se v My Trip prekrivki iz JourneyBooking.
  * ISSUE #4 §4 (val 3): DRAFT — osnutek, ki čaka uporabnikovo potrditev
  * (vedno z razloženim izvorom v source polju).
+ * ISSUE #24 Sklop 8 (1.170.0): +it/de/fr/es (Go Mode žeton rezervacije —
+ * isto dedno kanon GL: manjkajoč prevod → EN, nikoli SL za tuje).
  */
 export const CONFIRMATION_STATUS_LABELS: Record<
   ConfirmationStatus,
-  { sl: string; en: string }
+  GoStrings
 > = {
-  DRAFT: { sl: "Osnutek — čaka potrditev", en: "Draft — awaiting confirmation" },
-  SELECTED: { sl: "Izbrano", en: "Selected" },
+  DRAFT: {
+    sl: "Osnutek — čaka potrditev",
+    en: "Draft — awaiting confirmation",
+    it: "Bozza — in attesa di conferma",
+    de: "Entwurf — wartet auf Bestätigung",
+    fr: "Brouillon — en attente de confirmation",
+    es: "Borrador — a la espera de confirmación",
+  },
+  SELECTED: {
+    sl: "Izbrano",
+    en: "Selected",
+    it: "Selezionato",
+    de: "Ausgewählt",
+    fr: "Sélectionné",
+    es: "Seleccionado",
+  },
   BOOKING_REQUESTED: {
     sl: "Zahteva za rezervacijo oddana",
     en: "Booking request submitted",
+    it: "Richiesta di prenotazione inviata",
+    de: "Buchungsanfrage übermittelt",
+    fr: "Demande de réservation envoyée",
+    es: "Solicitud de reserva enviada",
   },
-  PENDING: { sl: "Čaka na ponudnika", en: "Awaiting provider" },
+  PENDING: {
+    sl: "Čaka na ponudnika",
+    en: "Awaiting provider",
+    it: "In attesa del fornitore",
+    de: "Wartet auf den Anbieter",
+    fr: "En attente du prestataire",
+    es: "A la espera del proveedor",
+  },
   PAYMENT_REQUIRED: {
     sl: "Zahtevano plačilo",
     en: "Payment required",
+    it: "Pagamento richiesto",
+    de: "Zahlung erforderlich",
+    fr: "Paiement requis",
+    es: "Pago requerido",
   },
-  PAID: { sl: "Plačano (čaka potrditev)", en: "Paid (awaiting confirmation)" },
-  CONFIRMED: { sl: "Potrjeno pri ponudniku", en: "Confirmed by provider" },
+  PAID: {
+    sl: "Plačano (čaka potrditev)",
+    en: "Paid (awaiting confirmation)",
+    it: "Pagato (in attesa di conferma)",
+    de: "Bezahlt (wartet auf Bestätigung)",
+    fr: "Payé (en attente de confirmation)",
+    es: "Pagado (a la espera de confirmación)",
+  },
+  CONFIRMED: {
+    sl: "Potrjeno pri ponudniku",
+    en: "Confirmed by provider",
+    it: "Confermato dal fornitore",
+    de: "Vom Anbieter bestätigt",
+    fr: "Confirmé par le prestataire",
+    es: "Confirmado por el proveedor",
+  },
   MODIFIED: {
     sl: "Spremenjeno pri ponudniku",
     en: "Modified at the provider",
+    it: "Modificato dal fornitore",
+    de: "Beim Anbieter geändert",
+    fr: "Modifié chez le prestataire",
+    es: "Modificado por el proveedor",
   },
-  REFUNDED: { sl: "Vračilo izvršeno", en: "Refunded" },
-  EXPIRED: { sl: "Poteklo", en: "Expired" },
-  FAILED: { sl: "Spodletelo", en: "Failed" },
-  CANCELLED: { sl: "Preklicano", en: "Cancelled" },
-  UNKNOWN: { sl: "Stanje neznano", en: "Status unknown" },
+  REFUNDED: {
+    sl: "Vračilo izvršeno",
+    en: "Refunded",
+    it: "Rimborsato",
+    de: "Erstattet",
+    fr: "Remboursé",
+    es: "Reembolsado",
+  },
+  EXPIRED: {
+    sl: "Poteklo",
+    en: "Expired",
+    it: "Scaduto",
+    de: "Abgelaufen",
+    fr: "Expiré",
+    es: "Caducado",
+  },
+  FAILED: {
+    sl: "Spodletelo",
+    en: "Failed",
+    it: "Non riuscito",
+    de: "Fehlgeschlagen",
+    fr: "Échoué",
+    es: "Fallido",
+  },
+  CANCELLED: {
+    sl: "Preklicano",
+    en: "Cancelled",
+    it: "Cancellata",
+    de: "Storniert",
+    fr: "Annulée",
+    es: "Cancelada",
+  },
+  UNKNOWN: {
+    sl: "Stanje neznano",
+    en: "Status unknown",
+    it: "Stato sconosciuto",
+    de: "Status unbekannt",
+    fr: "Statut inconnu",
+    es: "Estado desconocido",
+  },
   EXTERNAL: {
     sl: "Zunanja rezervacija — pri ponudniku",
     en: "External booking — at the provider",
+    it: "Prenotazione esterna — presso il fornitore",
+    de: "Externe Buchung — beim Anbieter",
+    fr: "Réservation externe — chez le prestataire",
+    es: "Reserva externa — en el proveedor",
   },
 };
 

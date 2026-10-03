@@ -13,6 +13,8 @@
 
 import { cn } from "@/lib/utils";
 import type { GuardianSnapshot } from "@/lib/journey/trip-health";
+// ISSUE #24 Sklop 8 (1.170.0): 6-jezični izpis (faza 2).
+import { GL, type GoLang, type GoStrings } from "@/lib/journey/go-lang";
 
 const TONE: Record<
   GuardianSnapshot["health"],
@@ -48,13 +50,13 @@ const TONE: Record<
 
 export interface GuardianBannerProps {
   snapshot: GuardianSnapshot;
-  lang: "sl" | "en";
+  lang: GoLang;
 }
 
 /** Stanje dneva: naslov (🟢 VSE TEČE PO NAČRTU …) + ena vrstica dejstev. */
 export function GuardianBanner({ snapshot, lang }: GuardianBannerProps) {
   const tone = TONE[snapshot.health];
-  const t = (o: { sl: string; en: string }) => o[lang];
+  const t = (o: GoStrings) => GL(lang, o);
   return (
     <div
       role="status"

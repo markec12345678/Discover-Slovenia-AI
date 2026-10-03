@@ -41,6 +41,9 @@ import {
 } from "@/lib/journey/go-view";
 import { speechTime } from "@/lib/itinerary-audio";
 import { DESTINATIONS } from "@/lib/slovenia-data";
+// ISSUE #24 Sklop 8 (1.170.0): 6-jezični glasovni vodik (faza 2 — polni
+// prevodi pripovedi IT/DE/FR/ES; TTS oznako glasa razreši speechLanguageTag).
+import { GL, type GoLang, type GoStrings } from "./go-lang";
 
 // ─── Omejitve (zod vrata — varujejo pošteno dolžino pripovedi) ────────────
 
@@ -171,7 +174,7 @@ export interface GoAudioLabels {
   voiceUnavailable: string;
 }
 
-export const GO_AUDIO_LABELS: Record<"sl" | "en", GoAudioLabels> = {
+export const GO_AUDIO_LABELS: Record<GoLang, GoAudioLabels> = {
   sl: {
     readStop: "Preberi",
     readStopAria: (title) => `Preberi postanek na glas: ${title}`,
@@ -200,6 +203,62 @@ export const GO_AUDIO_LABELS: Record<"sl" | "en", GoAudioLabels> = {
     voiceUnavailable:
       "Computer voice unavailable — the text is shown below.",
   },
+  it: {
+    readStop: "Ascolta",
+    readStopAria: (title) => `Leggi questa tappa ad alta voce: ${title}`,
+    stopPlayback: "Ferma",
+    stopPlaybackAria: (title) => `Ferma la lettura della tappa: ${title}`,
+    nearby: "Cosa c'è vicino",
+    nearbyAria: "Leggi ad alta voce quali destinazioni sono vicino a te",
+    stopNearby: "Ferma",
+    error: "La lettura ad alta voce non è al momento disponibile.",
+    showText: "Mostra testo",
+    hideText: "Nascondi testo",
+    voiceUnavailable:
+      "Voce del computer non disponibile — il testo è mostrato qui sotto.",
+  },
+  de: {
+    readStop: "Anhören",
+    readStopAria: (title) => `Diese Station vorlesen: ${title}`,
+    stopPlayback: "Stopp",
+    stopPlaybackAria: (title) => `Vorlesen dieser Station stoppen: ${title}`,
+    nearby: "Was ist in der Nähe",
+    nearbyAria: "Vorlesen, welche Ziele in deiner Nähe sind",
+    stopNearby: "Stopp",
+    error: "Das Vorlesen ist derzeit nicht verfügbar.",
+    showText: "Text anzeigen",
+    hideText: "Text ausblenden",
+    voiceUnavailable:
+      "Computerstimme nicht verfügbar — der Text steht unten.",
+  },
+  fr: {
+    readStop: "Écouter",
+    readStopAria: (title) => `Lire cet arrêt à voix haute : ${title}`,
+    stopPlayback: "Arrêter",
+    stopPlaybackAria: (title) => `Arrêter la lecture de l'arrêt : ${title}`,
+    nearby: "Qu'y a-t-il à proximité",
+    nearbyAria: "Lire à voix haute quelles destinations sont près de toi",
+    stopNearby: "Arrêter",
+    error: "La lecture à voix haute n'est pas disponible pour le moment.",
+    showText: "Afficher le texte",
+    hideText: "Masquer le texte",
+    voiceUnavailable:
+      "Voix de synthèse indisponible — le texte est affiché ci-dessous.",
+  },
+  es: {
+    readStop: "Escuchar",
+    readStopAria: (title) => `Leer esta parada en voz alta: ${title}`,
+    stopPlayback: "Detener",
+    stopPlaybackAria: (title) => `Detener la lectura de la parada: ${title}`,
+    nearby: "Qué hay cerca",
+    nearbyAria: "Leer en voz alta qué destinos están cerca de ti",
+    stopNearby: "Detener",
+    error: "La lectura en voz alta no está disponible ahora mismo.",
+    showText: "Mostrar texto",
+    hideText: "Ocultar texto",
+    voiceUnavailable:
+      "Voz del ordenador no disponible — el texto se muestra abajo.",
+  },
 };
 
 // ─── Gradnja pripovedi ─────────────────────────────────────────────────────
@@ -209,93 +268,215 @@ function cap(s: string): string {
   return s.length === 0 ? s : s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+// ─── ISSUE #24 Sklop 8 (1.170.0): PER-JEZIKOVNI PAKETI Pripovedi ───────────
+// SL/EN paketa izrecno ohranjata DOSLEDNO dosedanje izpise (regresija w7);
+// IT/DE/FR/ES so novi polni prevodi. Števila: SL v BESEDAH (izmera TTS —
+// števke bi glasil kot angleške besede sredi SL stavka), vsi drugi jeziki
+// puščajo števke (nativna izgovorjava TTS glasu v tem jeziku).
+
+/** Termin v govoru za tuje jezike (števke — nativna izgovorjava). */
+function goSpeechTimeForeign(time: string, lang: "it" | "de" | "fr" | "es"): string {
+  const t = time.trim();
+  if (t === "") return "";
+  const range = /^(\d{1,2}):(\d{2})\s*[-–—]\s*(\d{1,2}):(\d{2})$/.exec(t);
+  if (range) {
+    const h1 = Number(range[1]);
+    const m1 = Number(range[2]);
+    const h2 = Number(range[3]);
+    const m2 = Number(range[4]);
+    const a = `${h1}:${String(m1).padStart(2, "0")}`;
+    const b = `${h2}:${String(m2).padStart(2, "0")}`;
+    if (lang === "it") return `dalle ${a} alle ${b}`;
+    if (lang === "de") return `von ${a} bis ${b} Uhr`;
+    if (lang === "fr") return `de ${a} à ${b}`;
+    return `de ${a} a ${b}`;
+  }
+  const single = /^(\d{1,2}):(\d{2})$/.exec(t);
+  if (single) {
+    const h = Number(single[1]);
+    const m = Number(single[2]);
+    const hhmm = `${h}:${String(m).padStart(2, "0")}`;
+    if (lang === "it") return `alle ${hhmm}`;
+    if (lang === "de") return `um ${hhmm} Uhr`;
+    if (lang === "fr") return `à ${hhmm}`;
+    return `a las ${hhmm}`;
+  }
+  return t; // besedni termini gredo nespremenjeni skozi (že so govor)
+}
+
+/** Razdalja v govoru (tuji jeziki — števke, nativno izgovorjene). */
+function foreignKmPhrase(km: number, lang: "it" | "de" | "fr" | "es"): string {
+  if (lang === "it") return km === 1 ? "circa un chilometro" : `circa ${km} chilometri`;
+  if (lang === "de") return km === 1 ? "etwa ein Kilometer" : `etwa ${km} Kilometer`;
+  if (lang === "fr") return km === 1 ? "environ un kilomètre" : `environ ${km} kilomètres`;
+  return km === 1 ? "un kilómetro aproximadamente" : `unos ${km} kilómetros`;
+}
+
+/** Trajanje v govoru (tuji jeziki — števke). */
+function foreignDurationPhrase(min: number, lang: "it" | "de" | "fr" | "es"): string {
+  if (min >= 60 && min % 60 === 0) {
+    const h = min / 60;
+    if (lang === "it") return h === 1 ? "circa un'ora" : `circa ${h} ore`;
+    if (lang === "de") return h === 1 ? "etwa eine Stunde" : `etwa ${h} Stunden`;
+    if (lang === "fr") return h === 1 ? "environ une heure" : `environ ${h} heures`;
+    return h === 1 ? "una hora aproximadamente" : `unas ${h} horas`;
+  }
+  if (lang === "it") return min === 1 ? "circa un minuto" : `circa ${min} minuti`;
+  if (lang === "de") return min === 1 ? "etwa eine Minute" : `etwa ${min} Minuten`;
+  if (lang === "fr") return min === 1 ? "environ une minute" : `environ ${min} minutes`;
+  return min === 1 ? "un minuto aproximadamente" : `unos ${min} minutos`;
+}
+
+/** Paket stavkov pripovedi ENEGA postanka (en jezik = en paket). */
+interface StopNarrationPack {
+  stopIntro: (title: string) => string;
+  providerLine: (provider: string) => string;
+  locationLine: (location: string) => string;
+  /** (razdalja v besedah, smer) → poved z razkritjem PREMICE. */
+  kmBearingLine: (kmText: string, bearing: string) => string;
+  nearArrivalLine: (m: number) => string;
+  arrivedLine: () => string;
+  durationLine: (dText: string) => string;
+  timeText: (t: string) => string;
+  kmText: (km: number) => string;
+  durationText: (min: number) => string;
+}
+
+const NARRATION_PACKS: Record<GoLang, StopNarrationPack> = {
+  sl: {
+    stopIntro: (title) => `Postanek: ${title}.`,
+    providerLine: (provider) => `Pri ponudniku: ${provider}.`,
+    locationLine: (location) => `Lokacija: ${location}.`,
+    kmBearingLine: (kmText, bearing) => `${cap(kmText)} proti ${bearing}, premica.`,
+    nearArrivalLine: (m) => `Kmalu boš tam — približno ${m} metrov.`,
+    arrivedLine: () => "Prišel si na lokacijo.",
+    durationLine: (d) => `Priporočeno trajanje: ${d}.`,
+    timeText: (t) => speechTime(t, "sl"),
+    kmText: (km) => slKmPhrase(km),
+    durationText: (min) => slDurationPhrase(min),
+  },
+  en: {
+    stopIntro: (title) => `Stop: ${title}.`,
+    providerLine: (provider) => `Provider: ${provider}.`,
+    locationLine: (location) => `Location: ${location}.`,
+    kmBearingLine: (kmText, bearing) => `${cap(kmText)} toward the ${bearing}, as the crow flies.`,
+    nearArrivalLine: (m) => `Almost there — about ${m} meters.`,
+    arrivedLine: () => "You have arrived at the location.",
+    durationLine: (d) => `Recommended duration: ${d}.`,
+    timeText: (t) => speechTime(t, "en"),
+    kmText: (km) => (km === 1 ? "about 1 kilometer" : `about ${km} kilometers`),
+    durationText: (min) =>
+      min >= 60 && min % 60 === 0
+        ? min / 60 === 1
+          ? "about 1 hour"
+          : `about ${min / 60} hours`
+        : min === 1
+          ? "about 1 minute"
+          : `about ${min} minutes`,
+  },
+  it: {
+    stopIntro: (title) => `Tappa: ${title}.`,
+    providerLine: (provider) => `Presso il fornitore: ${provider}.`,
+    locationLine: (location) => `Posizione: ${location}.`,
+    kmBearingLine: (kmText, bearing) => `${cap(kmText)} verso ${bearing}, in linea d'aria.`,
+    nearArrivalLine: (m) => `Ci siamo quasi — circa ${m} metri.`,
+    arrivedLine: () => "Sei arrivato sulla posizione.",
+    durationLine: (d) => `Durata consigliata: ${d}.`,
+    timeText: (t) => goSpeechTimeForeign(t, "it"),
+    kmText: (km) => foreignKmPhrase(km, "it"),
+    durationText: (min) => foreignDurationPhrase(min, "it"),
+  },
+  de: {
+    stopIntro: (title) => `Station: ${title}.`,
+    providerLine: (provider) => `Beim Anbieter: ${provider}.`,
+    locationLine: (location) => `Standort: ${location}.`,
+    kmBearingLine: (kmText, bearing) => `${cap(kmText)} Richtung ${bearing}, Luftlinie.`,
+    nearArrivalLine: (m) => `Fast da — etwa ${m} Meter.`,
+    arrivedLine: () => "Du bist am Ziel angekommen.",
+    durationLine: (d) => `Empfohlene Dauer: ${d}.`,
+    timeText: (t) => goSpeechTimeForeign(t, "de"),
+    kmText: (km) => foreignKmPhrase(km, "de"),
+    durationText: (min) => foreignDurationPhrase(min, "de"),
+  },
+  fr: {
+    stopIntro: (title) => `Arrêt : ${title}.`,
+    providerLine: (provider) => `Chez le prestataire : ${provider}.`,
+    locationLine: (location) => `Emplacement : ${location}.`,
+    kmBearingLine: (kmText, bearing) => `${cap(kmText)} vers le ${bearing}, à vol d'oiseau.`,
+    nearArrivalLine: (m) => `Presque arrivé — environ ${m} mètres.`,
+    arrivedLine: () => "Tu es arrivé à destination.",
+    durationLine: (d) => `Durée recommandée : ${d}.`,
+    timeText: (t) => goSpeechTimeForeign(t, "fr"),
+    kmText: (km) => foreignKmPhrase(km, "fr"),
+    durationText: (min) => foreignDurationPhrase(min, "fr"),
+  },
+  es: {
+    stopIntro: (title) => `Parada: ${title}.`,
+    providerLine: (provider) => `En el proveedor: ${provider}.`,
+    locationLine: (location) => `Ubicación: ${location}.`,
+    kmBearingLine: (kmText, bearing) => `${cap(kmText)} hacia el ${bearing}, en línea recta.`,
+    nearArrivalLine: (m) => `Casi llegas — unos ${m} metros.`,
+    arrivedLine: () => "Has llegado a la ubicación.",
+    durationLine: (d) => `Duración recomendada: ${d}.`,
+    timeText: (t) => goSpeechTimeForeign(t, "es"),
+    kmText: (km) => foreignKmPhrase(km, "es"),
+    durationText: (min) => foreignDurationPhrase(min, "es"),
+  },
+};
+
 /**
  * Pripoved ENEGA postanka Go Mode — IZKLJUČNO iz dejstev kartice.
  *
- * Struktura: „Postanek: {naslov}. Pri ponudniku: X. Ob {termin}. Lokacija:
- * X. {km} proti {smer}, premica. Priporočeno trajanje: X."
- * Manjkajoče dejstvo → manjka poved (NE izmišljujemo termina/lokacije/
- * razdalje). Prazn naslov → null (fail-closed — gumba ni, kanon TASK 89).
+ * Struktura (per jezik — NARRATION_PACKS): uvod + ponudnik + termin +
+ * lokacija + razdalja/smer (PREMICA razkrita) + navigacijska dejstva +
+ * priporočeno trajanje. Manjkajoče dejstvo → manjka poved (NE izmišljujemo
+ * termina/lokacije/razdalje). Prazan naslov → null (fail-closed — gumba
+ * ni, kanon TASK 89).
  *
  * timeNote se NE pripoveduje (meta-razlaga, zakaj časa ni — zaslon jo
  * pokaže, govor so samo dejstva; isti kanon kot MY TRIP TASK 91).
  */
 export function buildStopNarration(
   card: GoEntryCard,
-  lang: "sl" | "en"
+  lang: GoLang
 ): string | null {
   const e = card.entry;
   const title = (e.title ?? "").trim().slice(0, GO_AUDIO_LIMITS.maxTitleChars);
   if (title === "") return null;
 
+  const p = NARRATION_PACKS[lang];
   const parts: string[] = [];
 
-  if (lang === "sl") {
-    parts.push(`Postanek: ${title}.`);
-    const provider = (e.providerLabel?.sl ?? "").trim().slice(0, GO_AUDIO_LIMITS.maxProviderChars);
-    if (provider !== "") parts.push(`Pri ponudniku: ${provider}.`);
-    if (e.time?.start) {
-      const t = speechTime(e.time.start, "sl");
-      if (t !== "") parts.push(`${cap(t)}.`);
-    }
-    const location = (e.location ?? "").trim().slice(0, GO_AUDIO_LIMITS.maxLocationChars);
-    if (location !== "") parts.push(`Lokacija: ${location}.`);
-    if (card.distanceKm != null && card.bearingLabel) {
-      const km = Math.round(card.distanceKm);
-      parts.push(
-        `${cap(slKmPhrase(km))} proti ${card.bearingLabel.sl}, premica.`
-      );
-    }
-    // ISSUE #21 §14 — živa navigacijska dejstva (deterministično iz travel
-    // state; SAMO dejstva, ki jih GPS dejansko podpira).
-    if (
-      card.travel?.status === "near_destination" &&
-      card.travel.arrivalM != null
-    ) {
-      parts.push(`Kmalu boš tam — približno ${card.travel.arrivalM} metrov.`);
-    }
-    if (card.travel?.status === "arrived") {
-      parts.push("Prišel si na lokacijo.");
-    }
-    if (e.durationMin != null && e.durationMin > 0) {
-      parts.push(`Priporočeno trajanje: ${slDurationPhrase(e.durationMin)}.`);
-    }
-  } else {
-    parts.push(`Stop: ${title}.`);
-    const provider = (e.providerLabel?.en ?? "").trim().slice(0, GO_AUDIO_LIMITS.maxProviderChars);
-    if (provider !== "") parts.push(`Provider: ${provider}.`);
-    if (e.time?.start) {
-      const t = speechTime(e.time.start, "en");
-      if (t !== "") parts.push(`${cap(t)}.`);
-    }
-    const location = (e.location ?? "").trim().slice(0, GO_AUDIO_LIMITS.maxLocationChars);
-    if (location !== "") parts.push(`Location: ${location}.`);
-    if (card.distanceKm != null && card.bearingLabel) {
-      const km = Math.round(card.distanceKm);
-      const kmText = km === 1 ? "about 1 kilometer" : `about ${km} kilometers`;
-      parts.push(`${cap(kmText)} toward the ${card.bearingLabel.en}, as the crow flies.`);
-    }
-    // ISSUE #21 §14 — arrival facts (deterministic, from travel state only).
-    if (
-      card.travel?.status === "near_destination" &&
-      card.travel.arrivalM != null
-    ) {
-      parts.push(`Almost there — about ${card.travel.arrivalM} meters.`);
-    }
-    if (card.travel?.status === "arrived") {
-      parts.push("You have arrived at the location.");
-    }
-    if (e.durationMin != null && e.durationMin > 0) {
-      if (e.durationMin >= 60 && e.durationMin % 60 === 0) {
-        const h = e.durationMin / 60;
-        const hText = h === 1 ? "about 1 hour" : `about ${h} hours`;
-        parts.push(`Recommended duration: ${hText}.`);
-      } else {
-        const m = e.durationMin;
-        const mText = m === 1 ? "about 1 minute" : `about ${m} minutes`;
-        parts.push(`Recommended duration: ${mText}.`);
-      }
-    }
+  parts.push(p.stopIntro(title));
+  // Podatkovni par {sl,en} (jezikovno nevtralen zapis) — tuji jeziki
+  // dedijo EN stran (isti kanon kot izris; P4-8: nikoli SL za tuje).
+  const providerRaw =
+    e.providerLabel?.[lang === "sl" ? "sl" : "en"] ?? "";
+  const provider = providerRaw.trim().slice(0, GO_AUDIO_LIMITS.maxProviderChars);
+  if (provider !== "") parts.push(p.providerLine(provider));
+  if (e.time?.start) {
+    const t = p.timeText(e.time.start);
+    if (t !== "") parts.push(`${cap(t)}.`);
+  }
+  const location = (e.location ?? "").trim().slice(0, GO_AUDIO_LIMITS.maxLocationChars);
+  if (location !== "") parts.push(p.locationLine(location));
+  if (card.distanceKm != null && card.bearingLabel) {
+    const km = Math.round(card.distanceKm);
+    parts.push(p.kmBearingLine(p.kmText(km), GL(lang, card.bearingLabel)));
+  }
+  // ISSUE #21 §14 — živa navigacijska dejstva (deterministično iz travel
+  // state; SAMO dejstva, ki jih GPS dejansko podpira).
+  if (
+    card.travel?.status === "near_destination" &&
+    card.travel.arrivalM != null
+  ) {
+    parts.push(p.nearArrivalLine(card.travel.arrivalM));
+  }
+  if (card.travel?.status === "arrived") {
+    parts.push(p.arrivedLine());
+  }
+  if (e.durationMin != null && e.durationMin > 0) {
+    parts.push(p.durationLine(p.durationText(e.durationMin)));
   }
 
   return parts.join(" ").replace(/\s+/g, " ").trim();
@@ -305,12 +486,12 @@ export function buildStopNarration(
 
 /** Ena destinacija v bližini (za pripoved + teste). */
 export interface NearbyDestination {
-  /** Ime (lastno ime — enako v obeh jezikih, kot v datasetu). */
+  /** Ime (lastno ime — enako v vseh jezikih, kot v datasetu). */
   name: string;
   /** Razdalja v celih km (brez lažne natančnosti desetin v govoru). */
   km: number;
-  /** Kardinalna smer od GPS (iste oznake kot DistanceChip). */
-  bearing: { sl: string; en: string };
+  /** Kardinalna smer od GPS (iste oznake kot DistanceChip — 6 jezikov). */
+  bearing: GoStrings;
 }
 
 /**
@@ -356,33 +537,61 @@ export function nearbyDestinations(
   return out.slice(0, Math.max(0, maxCount));
 }
 
+/** Naslov »kaj je v bližini« + postavitev enega imena (per jezik). */
+const NEARBY_PACKS: Record<
+  GoLang,
+  { intro: string; item: (name: string, km: number, bearing: string) => string }
+> = {
+  sl: {
+    intro: "V tvoji bližini:",
+    item: (name, km, bearing) => `${name}, ${slKmPhrase(km)} proti ${bearing}.`,
+  },
+  en: {
+    intro: "Near you:",
+    item: (name, km, bearing) =>
+      `${name}, ${km === 1 ? "about 1 kilometer" : `about ${km} kilometers`} to the ${bearing}.`,
+  },
+  it: {
+    intro: "Nelle tue vicinanze:",
+    item: (name, km, bearing) =>
+      `${name}, ${km === 1 ? "circa un chilometro" : `circa ${km} chilometri`} verso ${bearing}.`,
+  },
+  de: {
+    intro: "In deiner Nähe:",
+    item: (name, km, bearing) =>
+      `${name}, ${km === 1 ? "etwa ein Kilometer" : `etwa ${km} Kilometer`} Richtung ${bearing}.`,
+  },
+  fr: {
+    intro: "À proximité :",
+    item: (name, km, bearing) =>
+      `${name}, ${km === 1 ? "environ un kilomètre" : `environ ${km} kilomètres`} vers le ${bearing}.`,
+  },
+  es: {
+    intro: "Cerca de ti:",
+    item: (name, km, bearing) =>
+      `${name}, ${km === 1 ? "un kilómetro aproximadamente" : `unos ${km} kilómetros`} hacia el ${bearing}.`,
+  },
+};
+
 /**
  * Pripoved »kaj je v bližini« — imena destinacij + razdalja (cela km) +
- * smer. SL razdalje v BESEDAH (slKmPhrase), EN s števkami (nativno).
+ * smer. SL razdalje v BESEDAH (slKmPhrase), drugi jeziki s števkami
+ * (nativna izgovorjava TTS glasu v tem jeziku).
  *
  * Fail-closed: 0 destinacij → null (gumba NI — iskrena odsotnost).
  */
 export function buildNearbyNarration(
   position: GoPosition,
-  lang: "sl" | "en",
+  lang: GoLang,
   excludeNear?: ReadonlyArray<{ lat: number; lng: number }>
 ): string | null {
   const near = nearbyDestinations(position, excludeNear);
   if (near.length === 0) return null;
 
-  const parts: string[] = [];
-  if (lang === "sl") {
-    parts.push("V tvoji bližini:");
-    for (const n of near) {
-      parts.push(`${n.name}, ${slKmPhrase(n.km)} proti ${n.bearing.sl}.`);
-    }
-  } else {
-    parts.push("Near you:");
-    for (const n of near) {
-      const kmText =
-        n.km === 1 ? "about 1 kilometer" : `about ${n.km} kilometers`;
-      parts.push(`${n.name}, ${kmText} to the ${n.bearing.en}.`);
-    }
+  const p = NEARBY_PACKS[lang];
+  const parts: string[] = [p.intro];
+  for (const n of near) {
+    parts.push(p.item(n.name, n.km, GL(lang, n.bearing)));
   }
   return parts.join(" ").replace(/\s+/g, " ").trim();
 }

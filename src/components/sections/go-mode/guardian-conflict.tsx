@@ -29,11 +29,13 @@ import {
   type RecoveryPlan,
   type RecoverySuggestionAction,
 } from "@/lib/journey/recovery";
+// ISSUE #24 Sklop 8 (1.170.0): 6-jezični izpis (faza 2).
+import { GL, type GoLang, type GoStrings } from "@/lib/journey/go-lang";
 
 export interface GuardianConflictProps {
   conflict: GuardianConflict;
   recovery: RecoveryPlan | null;
-  lang: "sl" | "en";
+  lang: GoLang;
   /** Izvede predlagano akcijo (Go Mode posreduje obstoječe mehanizme). */
   onAction: (
     action: GuardianActionId | RecoverySuggestionAction,
@@ -58,7 +60,7 @@ export function GuardianConflictCard({
   isNextStop,
 }: GuardianConflictProps) {
   const [showRecovery, setShowRecovery] = useState(false);
-  const t = (o: { sl: string; en: string }) => o[lang];
+  const t = (o: GoStrings) => GL(lang, o);
 
   // Dejanja, ki jih konflikt ponudi (NAVIGATE samo na naslednjem postanku —
   // sicer bi navigirali k postanku, ki ni naslednji v toku).

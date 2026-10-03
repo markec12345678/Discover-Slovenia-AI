@@ -26,6 +26,9 @@
 // ČISTO: 0 omrežja, 0 db, 0 localStorage — testirljivo.
 // ============================================================================
 
+// ISSUE #24 Sklop 8 (1.170.0): 6-jezične oznake (faza 2 — polni prevodi).
+import type { GoStrings } from "./go-lang";
+
 // ---------------------------------------------------------------------------
 // SHEMA DNEVA — vrstni red + stanja (projekcija GoView)
 // ---------------------------------------------------------------------------
@@ -132,37 +135,88 @@ export function buildDayMapUrl(
 }
 
 // ---------------------------------------------------------------------------
-// UI OZNAKE (L vzorec — dvojezične, ISKRENE)
+// UI OZNAKE (6-jezične — ISSUE #24 Sklop 8 faza 2, ISKRENE)
 // ---------------------------------------------------------------------------
 
 export const DAY_LINE_LABELS = {
   title: {
     sl: "Zaporedje dneva",
     en: "Order of the day",
+    it: "Sequenza della giornata",
+    de: "Reihenfolge des Tages",
+    fr: "Ordre de la journée",
+    es: "Orden del día",
   },
   /** Shema je vrstni red, ne geografija — to POMO rečemo. */
   schematicHint: {
     sl: "Shematski prikaz po vrstnem redu načrta — ne zemljevid.",
     en: "Schematic view in plan order — not a map.",
+    it: "Vista schematica nell'ordine del piano — non una mappa.",
+    de: "Schematische Ansicht in Planreihenfolge — keine Karte.",
+    fr: "Vue schématique dans l'ordre du plan — pas une carte.",
+    es: "Vista esquemática en el orden del plan — no es un mapa.",
   },
   state: {
-    done: { sl: "opravljeno", en: "done" },
-    skipped: { sl: "preskočeno", en: "skipped" },
-    current: { sl: "trenutni cilj", en: "current target" },
-    arrived: { sl: "prišel si", en: "arrived" },
-    upcoming: { sl: "prihodnje", en: "upcoming" },
-  } satisfies Record<DayLineState, { sl: string; en: string }>,
+    done: {
+      sl: "opravljeno",
+      en: "done",
+      it: "completato",
+      de: "erledigt",
+      fr: "terminé",
+      es: "completado",
+    },
+    skipped: {
+      sl: "preskočeno",
+      en: "skipped",
+      it: "saltato",
+      de: "übersprungen",
+      fr: "passé",
+      es: "omitido",
+    },
+    current: {
+      sl: "trenutni cilj",
+      en: "current target",
+      it: "obiettivo attuale",
+      de: "aktuelles Ziel",
+      fr: "objectif actuel",
+      es: "objetivo actual",
+    },
+    arrived: {
+      sl: "prišel si",
+      en: "arrived",
+      it: "sei arrivato",
+      de: "angekommen",
+      fr: "arrivé",
+      es: "has llegado",
+    },
+    upcoming: {
+      sl: "prihodnje",
+      en: "upcoming",
+      it: "in arrivo",
+      de: "kommend",
+      fr: "à venir",
+      es: "próximo",
+    },
+  } satisfies Record<DayLineState, GoStrings>,
 } as const;
 
 export const DAY_MAP_LABELS = {
   open: {
     sl: (n: number) => `Odpri dan v zemljevidu (${n} postankov)`,
     en: (n: number) => `Open the day in Maps (${n} stops)`,
+    it: (n: number) => `Apri la giornata in Maps (${n} tappe)`,
+    de: (n: number) => `Den Tag in Maps öffnen (${n} Stationen)`,
+    fr: (n: number) => `Ouvrir la journée dans Maps (${n} arrêts)`,
+    es: (n: number) => `Abrir el día en Maps (${n} paradas)`,
   },
   /** IZRECNO zunanja aplikacija (kanon go-nav GO_NAV_LABELS.external). */
   external: {
     sl: "Odpre zunanjo zemljevidno aplikacijo (cel dan kot pot z vmesnimi točkami)",
     en: "Opens an external map app (the whole day as a route with stops)",
+    it: "Apre un'app di mappe esterna (l'intera giornata come percorso con tappe)",
+    de: "Öffnet eine externe Karten-App (der ganze Tag als Route mit Stationen)",
+    fr: "Ouvre une application de cartes externe (toute la journée comme itinéraire avec arrêts)",
+    es: "Abre una aplicación de mapas externa (todo el día como ruta con paradas)",
   },
   /** Iskrena meja URL API (>10 točk obrezano po vrstnem redu načrta). */
   cappedHint: {
@@ -170,10 +224,22 @@ export const DAY_MAP_LABELS = {
       `Zemljevid nosi največ ${max} postankov — prikazani so prvi po vrstnem redu.`,
     en: (max: number) =>
       `The map carries at most ${max} stops — the first ones in plan order are shown.`,
+    it: (max: number) =>
+      `La mappa contiene al massimo ${max} tappe — vengono mostrate le prime nell'ordine del piano.`,
+    de: (max: number) =>
+      `Die Karte trägt höchstens ${max} Stationen — die ersten in Planreihenfolge werden angezeigt.`,
+    fr: (max: number) =>
+      `La carte porte au maximum ${max} arrêts — les premiers dans l'ordre du plan sont affichés.`,
+    es: (max: number) =>
+      `El mapa admite como máximo ${max} paradas — se muestran las primeras en el orden del plan.`,
   },
   /** Brez para veljavnih koordinat povezave NI (fail-closed). */
   unavailable: {
     sl: "Dan nima dovolj točk z znanimi koordinatami za prikaz v zemljevidu.",
     en: "The day does not have enough stops with known coordinates to show on a map.",
+    it: "La giornata non ha abbastanza tappe con coordinate note per essere mostrata su una mappa.",
+    de: "Der Tag hat nicht genug Stationen mit bekannten Koordinaten für die Kartendarstellung.",
+    fr: "La journée n'a pas assez d'arrêts avec des coordonnées connues pour être affichée sur une carte.",
+    es: "El día no tiene suficientes paradas con coordenadas conocidas para mostrarlas en un mapa.",
   },
 } as const;

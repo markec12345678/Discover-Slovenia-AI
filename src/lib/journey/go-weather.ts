@@ -148,11 +148,16 @@ export function observedTimeLabel(iso: string): string | null {
   return m ? m[1] : null;
 }
 
+// 6-jezično (ISSUE #24 Sklop 8 faza 2 — polni prevodi Go Mode površine).
 export const GO_WEATHER_LABELS = {
   /** Naslov traku — izrecno PRI naslednji postanki (ne pri uporabniku). */
   title: {
     sl: "Vreme pri naslednji postanki",
     en: "Weather at your next stop",
+    it: "Meteo alla prossima tappa",
+    de: "Wetter an deiner nächsten Station",
+    fr: "Météo au prochain arrêt",
+    es: "Tiempo en tu próxima parada",
   },
   /** Današnja napoved — „danes do 26°, padavine 10 %". */
   today: {
@@ -164,17 +169,48 @@ export const GO_WEATHER_LABELS = {
       t.precipitationProbabilityMax != null
         ? `today up to ${t.tempMax} °C · rain ${t.precipitationProbabilityMax} %`
         : `today up to ${t.tempMax} °C`,
+    it: (t: TodayOutlookPayload) =>
+      t.precipitationProbabilityMax != null
+        ? `oggi fino a ${t.tempMax} °C · pioggia ${t.precipitationProbabilityMax} %`
+        : `oggi fino a ${t.tempMax} °C`,
+    de: (t: TodayOutlookPayload) =>
+      t.precipitationProbabilityMax != null
+        ? `heute bis ${t.tempMax} °C · Regen ${t.precipitationProbabilityMax} %`
+        : `heute bis ${t.tempMax} °C`,
+    fr: (t: TodayOutlookPayload) =>
+      t.precipitationProbabilityMax != null
+        ? `aujourd'hui jusqu'à ${t.tempMax} °C · pluie ${t.precipitationProbabilityMax} %`
+        : `aujourd'hui jusqu'à ${t.tempMax} °C`,
+    es: (t: TodayOutlookPayload) =>
+      t.precipitationProbabilityMax != null
+        ? `hoy hasta ${t.tempMax} °C · lluvia ${t.precipitationProbabilityMax} %`
+        : `hoy hasta ${t.tempMax} °C`,
   },
   /** Meritev vira — „meritev ob 08:15". */
   observed: {
     sl: (hhmm: string) => `meritev ob ${hhmm}`,
     en: (hhmm: string) => `measured at ${hhmm}`,
+    it: (hhmm: string) => `rilevato alle ${hhmm}`,
+    de: (hhmm: string) => `gemessen um ${hhmm} Uhr`,
+    fr: (hhmm: string) => `mesuré à ${hhmm}`,
+    es: (hhmm: string) => `medido a las ${hhmm}`,
   },
   /** Vir (label izrecno — isti kanon kot zemljevid/destinacije). */
-  source: { sl: "vir: Open-Meteo", en: "source: Open-Meteo" },
+  source: {
+    sl: "vir: Open-Meteo",
+    en: "source: Open-Meteo",
+    it: "fonte: Open-Meteo",
+    de: "Quelle: Open-Meteo",
+    fr: "source\u00a0: Open-Meteo",
+    es: "fuente: Open-Meteo",
+  },
   /** Brez signala / napaka vira — načrt SAM še vedno deluje. */
   unavailable: {
     sl: "Vreme trenutno ni na voljo (morda brez signala) — načrt pa dela naprej.",
     en: "Weather is not available right now (maybe no signal) — the plan keeps working.",
+    it: "Il meteo non è disponibile al momento (forse senza segnale) — il piano continua a funzionare.",
+    de: "Das Wetter ist gerade nicht verfügbar (vielleicht kein Signal) — der Plan funktioniert weiter.",
+    fr: "La météo n'est pas disponible pour le moment (peut-être pas de signal) — le plan continue de fonctionner.",
+    es: "El tiempo no está disponible ahora mismo (quizás sin señal) — el plan sigue funcionando.",
   },
 } as const;

@@ -33,6 +33,15 @@
 // Intl.DateTimeFormat (deluje na clientu in serverju, brez date-fns-tz).
 // ============================================================================
 
+// ============================================================================
+// ISSUE #24 Sklop 8 (1.170.0): podrobnosti statusa so 6-jezične (faza 2 —
+// polni prevodi Go Mode površine; isto dedni kanon GL: manjkajoč tuji
+// prevod → EN, nikoli SL za tuje uporabnike — P4-8).
+// ============================================================================
+
+import type { GoStrings } from "@/lib/journey/go-lang";
+import { goAll } from "@/lib/journey/go-lang";
+
 /** Dan v tednu po JS konvenciji: 0 = nedelja … 6 = sobota. */
 export interface OpeningMoment {
   weekday: number;
@@ -45,12 +54,12 @@ export type OpeningStatus = "OPEN" | "CLOSED" | "UNKNOWN";
 export interface OpeningStatusResult {
   status: OpeningStatus;
   /**
-   * Podrobnost statusa (dvojezično SL/EN):
+   * Podrobnost statusa (6-jezično — Sklop 8 faza 2):
    *  OPEN    → "odprto do 17:00" / "24/7"
    *  CLOSED  → "zaprto · odpre pon 08:00"
    *  UNKNOWN → razlog neznanja (ni objavljeno / zapleten zapis)
    */
-  detail: { sl: string; en: string };
+  detail: GoStrings;
   /** Surov niz vira (echo — za prikaz poleg statusa, nič ne izgubimo). */
   raw?: string;
 }
@@ -67,15 +76,16 @@ const WEEKDAY_CODES: Record<string, number> = {
   sa: 6,
 };
 
-/** Kratek dan za podrobnost (SL/EN), indeks = JS dan (0 = nedelja). */
-const DAY_SHORT: { sl: string; en: string }[] = [
-  { sl: "ned", en: "Sun" },
-  { sl: "pon", en: "Mon" },
-  { sl: "tor", en: "Tue" },
-  { sl: "sre", en: "Wed" },
-  { sl: "čet", en: "Thu" },
-  { sl: "pet", en: "Fri" },
-  { sl: "sob", en: "Sat" },
+/** Kratek dan za podrobnost (6 jezikov, VSI ključi obvezni — indeks = JS dan, 0 = nedelja). */
+type DayShort = Record<"sl" | "en" | "it" | "de" | "fr" | "es", string>;
+const DAY_SHORT: DayShort[] = [
+  { sl: "ned", en: "Sun", it: "dom", de: "So", fr: "dim", es: "dom" },
+  { sl: "pon", en: "Mon", it: "lun", de: "Mo", fr: "lun", es: "lun" },
+  { sl: "tor", en: "Tue", it: "mar", de: "Di", fr: "mar", es: "mar" },
+  { sl: "sre", en: "Wed", it: "mer", de: "Mi", fr: "mer", es: "mié" },
+  { sl: "čet", en: "Thu", it: "gio", de: "Do", fr: "jeu", es: "jue" },
+  { sl: "pet", en: "Fri", it: "ven", de: "Fr", fr: "ven", es: "vie" },
+  { sl: "sob", en: "Sat", it: "sab", de: "Sa", fr: "sam", es: "sáb" },
 ];
 
 // ── Notranji model parsanega zapisa ───────────────────────────────────────
@@ -317,20 +327,50 @@ const LABELS = {
   openUntil: {
     sl: (t: string) => `odprto do ${t}`,
     en: (t: string) => `open until ${t}`,
+    it: (t: string) => `aperto fino alle ${t}`,
+    de: (t: string) => `geöffnet bis ${t} Uhr`,
+    fr: (t: string) => `ouvert jusqu'à ${t}`,
+    es: (t: string) => `abierto hasta las ${t}`,
   },
-  open247: { sl: "odprto 24/7", en: "open 24/7" },
+  open247: {
+    sl: "odprto 24/7",
+    en: "open 24/7",
+    it: "aperto 24/7",
+    de: "durchgehend geöffnet",
+    fr: "ouvert 24h/24",
+    es: "abierto 24/7",
+  },
   closedOpens: {
     sl: (d: string, t: string) => `zaprto · odpre ${d} ${t}`,
     en: (d: string, t: string) => `closed · opens ${d} ${t}`,
+    it: (d: string, t: string) => `chiuso · apre ${d} alle ${t}`,
+    de: (d: string, t: string) => `geschlossen · öffnet ${d} ${t} Uhr`,
+    fr: (d: string, t: string) => `fermé · ouvre ${d} ${t}`,
+    es: (d: string, t: string) => `cerrado · abre ${d} a las ${t}`,
   },
-  closedNoReopen: { sl: "zaprto", en: "closed" },
+  closedNoReopen: {
+    sl: "zaprto",
+    en: "closed",
+    it: "chiuso",
+    de: "geschlossen",
+    fr: "fermé",
+    es: "cerrado",
+  },
   missing: {
     sl: "odpiralni časi niso objavljeni v viru",
     en: "opening hours not published by the source",
+    it: "orari di apertura non pubblicati dalla fonte",
+    de: "Öffnungszeiten von der Quelle nicht veröffentlicht",
+    fr: "horaires d'ouverture non publiés par la source",
+    es: "horario de apertura no publicado por la fuente",
   },
   complex: {
     sl: "zapleten zapis ur — preveri pri ponudniku",
     en: "complex hours notation — check with the provider",
+    it: "notazione degli orari complessa — verifica con il fornitore",
+    de: "komplexe Öffnungszeiten-Schreibweise — beim Anbieter nachfragen",
+    fr: "notation des horaires complexe — vérifiez auprès du prestataire",
+    es: "notación de horarios compleja — verifica con el proveedor",
   },
 } as const;
 
@@ -376,26 +416,20 @@ export function openingStatusAt(
       }
     }
     const endLabel = ends.length ? minutesLabel(Math.min(...ends)) : null;
-    const detail = endLabel
-      ? {
-          sl: LABELS.openUntil.sl(endLabel),
-          en: LABELS.openUntil.en(endLabel),
-        }
-      : LABELS.open247;
+    const detail = endLabel ? goAll(LABELS.openUntil, endLabel) : LABELS.open247;
     return { status: "OPEN", detail, raw };
   }
   // CLOSED — pošteno s naslednjo otvoritvijo, če jo zapis pove.
+  // Dan je SAMO po-jezikovni niz (vsak jezik dobi svoje okrajšano ime).
   const next = nextOpening(parsed, at);
   const detail = next
     ? {
-        sl: LABELS.closedOpens.sl(
-          DAY_SHORT[next.day].sl,
-          minutesLabel(next.minutes)
-        ),
-        en: LABELS.closedOpens.en(
-          DAY_SHORT[next.day].en,
-          minutesLabel(next.minutes)
-        ),
+        sl: LABELS.closedOpens.sl(DAY_SHORT[next.day].sl, minutesLabel(next.minutes)),
+        en: LABELS.closedOpens.en(DAY_SHORT[next.day].en, minutesLabel(next.minutes)),
+        it: LABELS.closedOpens.it(DAY_SHORT[next.day].it, minutesLabel(next.minutes)),
+        de: LABELS.closedOpens.de(DAY_SHORT[next.day].de, minutesLabel(next.minutes)),
+        fr: LABELS.closedOpens.fr(DAY_SHORT[next.day].fr, minutesLabel(next.minutes)),
+        es: LABELS.closedOpens.es(DAY_SHORT[next.day].es, minutesLabel(next.minutes)),
       }
     : LABELS.closedNoReopen;
   return { status: "CLOSED", detail, raw };

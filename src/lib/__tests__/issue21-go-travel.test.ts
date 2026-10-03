@@ -506,8 +506,9 @@ describe("ISSUE #21: go-mode.tsx — source contract", () => {
 
   test("① arrival trakova: near (Približuješ se) in arrived (Prišel si) z role=status", () => {
     expect(src).toContain('role="status"');
-    expect(src).toContain("ARRIVAL_LABELS.near[lang]");
-    expect(src).toContain("ARRIVAL_LABELS.arrived[lang]");
+    // Sklop 8 (1.170.0): GFn(lang, ...) izbere jezik (prej [lang] indeks).
+    expect(src).toContain("GFn(lang, ARRIVAL_LABELS.near)");
+    expect(src).toContain("GFn(lang, ARRIVAL_LABELS.arrived)");
     expect(src).toContain("ARRIVAL_LABELS.arrivedHint");
   });
 
@@ -524,7 +525,7 @@ describe("ISSUE #21: go-mode.tsx — source contract", () => {
   });
 
   test("④ zastarelost fiksacije se izrecno prikaže", () => {
-    expect(src).toContain("ARRIVAL_LABELS.stale[lang]");
+    expect(src).toContain("GFn(lang, ARRIVAL_LABELS.stale)");
     expect(src).toContain("positionAgeMs");
     expect(src).toContain("positionStale");
   });

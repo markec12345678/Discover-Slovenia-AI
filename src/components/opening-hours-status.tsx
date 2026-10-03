@@ -23,12 +23,35 @@ import {
   openingStatusNow,
   type OpeningStatusResult,
 } from "@/lib/opening-hours";
+// ISSUE #24 Sklop 8 (1.170.0): 6-jezični žeton (faza 2 — polni prevodi).
+import { GL, type GoLang, type GoStrings } from "@/lib/journey/go-lang";
 
 const L = {
   chip: {
-    open: { sl: "ZDAJ ODPRTO", en: "OPEN NOW" },
-    closed: { sl: "ZDAJ ZAPRTO", en: "CLOSED NOW" },
-    unknown: { sl: "URA NEZNANA", en: "HOURS UNKNOWN" },
+    open: {
+      sl: "ZDAJ ODPRTO",
+      en: "OPEN NOW",
+      it: "APERTO ORA",
+      de: "JETZT GEÖFFNET",
+      fr: "OUVERT ACTUELLEMENT",
+      es: "ABIERTO AHORA",
+    },
+    closed: {
+      sl: "ZDAJ ZAPRTO",
+      en: "CLOSED NOW",
+      it: "CHIUSO ORA",
+      de: "JETZT GESCHLOSSEN",
+      fr: "FERMÉ ACTUELLEMENT",
+      es: "CERRADO AHORA",
+    },
+    unknown: {
+      sl: "URA NEZNANA",
+      en: "HOURS UNKNOWN",
+      it: "ORARI SCONOSCIUTI",
+      de: "ÖFFNUNGSZEITEN UNBEKANNT",
+      fr: "HORAIRES INCONNUS",
+      es: "HORARIO DESCONOCIDO",
+    },
   },
 } as const;
 
@@ -62,7 +85,17 @@ function clientSnapshot(raw: string): OpeningStatusResult {
   try {
     result = openingStatusNow(raw);
   } catch {
-    result = { status: "UNKNOWN", detail: { sl: "ura trenutno ni znana", en: "hours currently unknown" } };
+    result = {
+      status: "UNKNOWN",
+      detail: {
+        sl: "ura trenutno ni znana",
+        en: "hours currently unknown",
+        it: "orari attualmente sconosciuti",
+        de: "Öffnungszeiten derzeit unbekannt",
+        fr: "horaires actuellement inconnus",
+        es: "horario actualmente desconocido",
+      },
+    };
   }
   if (snapshotCache.size > 256) snapshotCache.clear();
   snapshotCache.set(key, { at: bucket, result });
@@ -72,13 +105,14 @@ function clientSnapshot(raw: string): OpeningStatusResult {
 export interface OpeningHoursStatusProps {
   /** Surov niz odpiralnih ur vira (OSM opening_hours / Listing.openingHours). */
   raw: string | null | undefined;
-  lang: "sl" | "en";
+  /** Sklop 8 (1.170.0): 6 jezikov (Go Mode; journey-planner ostaja sl/en). */
+  lang: GoLang;
   /** Ali izrisati tudi surov niz (privzeto da — zero feature loss). */
   showRaw?: boolean;
   /** ISSUE #4 §8 (val 2): oznaka, ko ur NI (vir ne objavlja) — če je podana,
    * se namesto tihe odsotnosti izriše iskren UNKNOWN žeton (»Če vira ni,
    * mora biti UNKNOWN«). */
-  missingLabel?: { sl: string; en: string };
+  missingLabel?: GoStrings;
   className?: string;
 }
 
@@ -113,9 +147,9 @@ export function OpeningHoursStatus({
           className="gap-1 px-1.5 py-0 text-[10px] font-semibold text-muted-foreground"
         >
           <HelpCircle className="size-3" aria-hidden="true" />
-          {L.chip.unknown[lang]}
+          {GL(lang, L.chip.unknown)}
         </Badge>
-        <span className="whitespace-nowrap">{missingLabel[lang]}</span>
+        <span className="whitespace-nowrap">{GL(lang, missingLabel)}</span>
       </span>
     );
   }
@@ -139,12 +173,15 @@ export function OpeningHoursStatus({
           >
             <Icon className="size-3" aria-hidden="true" />
             {
-              L.chip[
-                status.status.toLowerCase() as "open" | "closed" | "unknown"
-              ][lang]
+              GL(
+                lang,
+                L.chip[
+                  status.status.toLowerCase() as "open" | "closed" | "unknown"
+                ]
+              )
             }
           </Badge>
-          <span className="whitespace-nowrap">{status.detail[lang]}</span>
+          <span className="whitespace-nowrap">{GL(lang, status.detail)}</span>
         </>
       ) : null}
       {showRaw ? (

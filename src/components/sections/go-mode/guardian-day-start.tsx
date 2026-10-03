@@ -16,10 +16,22 @@ import {
   type DayStartSummary,
 } from "@/lib/journey/day-start";
 import { CONFLICT_LABELS } from "@/lib/journey/conflict-detect";
+// ISSUE #24 Sklop 8 (1.170.0): 6-jezični izpis (faza 2).
+import { GL, GFn, type GoLang, type GoStrings } from "@/lib/journey/go-lang";
+
+/** Pozdrav »dobro jutro« (6 jezikov — prej inline ternary). */
+const MORNING_LABEL = {
+  sl: "DOBRO JUTRO",
+  en: "GOOD MORNING",
+  it: "BUONGIORNO",
+  de: "GUTEN MORGEN",
+  fr: "BONJOUR",
+  es: "BUENOS DÍAS",
+} as const;
 
 export interface GuardianDayStartProps {
   summary: DayStartSummary;
-  lang: "sl" | "en";
+  lang: GoLang;
   onStartDay: () => void;
 }
 
@@ -28,15 +40,15 @@ export function GuardianDayStartSection({
   lang,
   onStartDay,
 }: GuardianDayStartProps) {
-  const t = (o: { sl: string; en: string }) => o[lang];
-  const greeting =
-    lang === "sl"
-      ? DAY_START_LABELS.greeting.sl(summary.stopCount, summary.fixedCount)
-      : DAY_START_LABELS.greeting.en(summary.stopCount, summary.fixedCount);
-  const missing =
-    lang === "sl"
-      ? DAY_START_LABELS.missing.sl(summary.missingGeoCount, summary.missingTimeCount)
-      : DAY_START_LABELS.missing.en(summary.missingGeoCount, summary.missingTimeCount);
+  const t = (o: GoStrings) => GL(lang, o);
+  const greeting = GFn(lang, DAY_START_LABELS.greeting)(
+    summary.stopCount,
+    summary.fixedCount
+  );
+  const missing = GFn(lang, DAY_START_LABELS.missing)(
+    summary.missingGeoCount,
+    summary.missingTimeCount
+  );
 
   return (
     <section
@@ -50,22 +62,18 @@ export function GuardianDayStartSection({
         />
         <div className="min-w-0 space-y-1">
           <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
-            {lang === "sl" ? "DOBRO JUTRO" : "GOOD MORNING"}
+            {GL(lang, MORNING_LABEL)}
           </p>
           <p className="text-sm font-medium">{greeting}</p>
           {summary.firstStop && (
             <p className="text-sm text-muted-foreground">
-              {lang === "sl"
-                ? DAY_START_LABELS.firstGoal.sl(summary.firstStop.title)
-                : DAY_START_LABELS.firstGoal.en(summary.firstStop.title)}
+              {GFn(lang, DAY_START_LABELS.firstGoal)(summary.firstStop.title)}
               {summary.firstStop.timeStart ? ` · ${summary.firstStop.timeStart}` : ""}
             </p>
           )}
           {summary.route && (
             <p className="text-xs text-muted-foreground">
-              {lang === "sl"
-                ? DAY_START_LABELS.route.sl(summary.route.km, summary.route.min)
-                : DAY_START_LABELS.route.en(summary.route.km, summary.route.min)}
+              {GFn(lang, DAY_START_LABELS.route)(summary.route.km, summary.route.min)}
               {summary.route.legsKnown < summary.route.legsTotal
                 ? ` (${summary.route.legsKnown}/${summary.route.legsTotal})`
                 : ""}
